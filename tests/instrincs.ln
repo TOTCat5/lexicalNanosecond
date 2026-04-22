@@ -1,0 +1,14 @@
+import bmi2;
+import io;
+
+
+main:int32(argc:int32,argv:stackList(str))
+{
+    if(argc!=2)
+    {
+        return -1;
+    }
+
+    io.print(str(bmi2.pdep(int64(argv[0]),int64(argv[1]))));
+}
+

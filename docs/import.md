@@ -1,0 +1,1 @@
+**import** basically work as its Python version as it will import as a named module your code. ~~Tho~~ if you don't want to write the module name each time,you can just "import module all;"

@@ -1,0 +1,10 @@
+import memory_management as mem
+
+main:int32()
+{
+    testPtr:ptr(int32)=mem.alloc(sizeof(int32));
+    [testPtr]=100;
+
+    print(str([testPtr]));
+    mem.free(testPtr)
+}

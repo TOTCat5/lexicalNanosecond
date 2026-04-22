@@ -1,0 +1,6 @@
+import io;
+
+main:int32()
+{
+    io.print("Hello World !\n");
+}

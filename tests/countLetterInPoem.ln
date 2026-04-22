@@ -1,0 +1,25 @@
+import io;
+
+
+main:int32(argc:int32,argv:array(str))
+{
+    if(argc!=3)
+    {
+        return -1;
+    }
+    file:io.stream=io.open(argv[1]);
+    searchedLetter:char=argv[2][0];
+
+    count:uint64=0;
+    while(!file.eof())
+    {
+        letter:char=file.putc();
+        if(letter==searchedLetter)
+        {
+            count+=1;
+        }
+    }
+
+    io.print(str(count));
+    return 0;
+}
