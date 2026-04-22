@@ -1,0 +1,11 @@
+
+doSomeMath:uint64(x:int64[i%2],y:int64)=x*y;
+
+main:int32()
+{
+    
+
+
+    return -1;
+}
+
