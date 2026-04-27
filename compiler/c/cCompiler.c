@@ -42,16 +42,10 @@ void lex(LexToken **tokens,char *str,size_t strSize)
     LexToken *tokenList=NULL;
     listCreate(tokenList,2);
 
-    size_t i=0;
-    // ALWAYS pass through this definition to set the loop i 
-    #define SET_LEX_LOOP_I(value) do{i=value;if(i>=strSize){goto outOfLoop;}}while(0)
-
-    while(true)
+    for(size_t i=0;i<strSize;++i)
     {
-
-        SET_I(1+i);
+        
     }
-    outOfLoop:
 }
 
 int main(int argc,char *argv[])
@@ -59,12 +53,25 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
     fprintf(outFile,
-        "global WinMain\n"
-        "\n"
+        "global _start\n"
+        "extern ExitProcess\n"
+    );
+
+    fprintf(outFile,
         "section .text\n"
-        "WinMain:\n"
-        "    xor eax, eax\n"
+        "_start:\n"
+        "    sub rsp,40\n"
+        "    call main\n"
+        "    mov rcx,rax\n"
+        "    call ExitProcess\n"
+        "    add rsp,40\n"
+    );
+
+    fprintf(outFile,
+        "main:\n"
+        "    xor rax,rax\n"
         "    ret"
     );
+
 }
 

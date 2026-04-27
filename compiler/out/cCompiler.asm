@@ -1,6 +1,12 @@
-global WinMain
-
+global _start
+extern ExitProcess
 section .text
-WinMain:
-    xor eax, eax
+_start:
+    sub rsp,40
+    call main
+    mov rcx,rax
+    call ExitProcess
+    add rsp,40
+main:
+    xor rax,rax
     ret
