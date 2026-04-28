@@ -36,6 +36,19 @@ typedef struct LexToken
     char *tokenEnd;
 } LexToken;
 
+char *poncutationTokens[]={
+    " ",
+    ".",
+    ",",
+    "\"",
+    "\'",
+    ";",
+    ":",
+    "{",
+    "}",
+    "\\\\"
+};
+
 // Assume str is null-terminated
 void lex(LexToken **tokens,char *str,size_t strSize)
 {
