@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "list.h"
 #include <stdint.h>
 
@@ -78,13 +79,50 @@ size_t preprocess(char *str,size_t strSize)
     size_t outI=0;
 
     bool isInString=false;
+    bool comment=false;
     for(size_t i=0;i<strSize;++i)
     {
         if(str[i]=='\"')
         {
-            
+            bool hasBackslash=false;
+            size_t backslashI=i;
+            while(backslashI<=1)
+            {
+                if(str[backslashI-1]!='\\')
+                {
+                    break;
+                }
+                hasBackslash=!hasBackslash;
+                --backslashI;
+            }
+
+            if(!hasBackslash)
+            {
+                isInString=!isInString;
+            }
         }
+
+        if((!strncmp(str+i,"\\",2))&&!isInString)
+        {
+            comment=true;
+        }
+
+        if(str[i]=='\n')
+        {
+            comment=false;
+        }
+
+        if(comment)
+        {
+            continue;
+        }
+
+        out[outI++]=str[i];
+        outSize++;
     }
+    
+
+    return outSize;
 }
 
 // Assume str is null-terminated
