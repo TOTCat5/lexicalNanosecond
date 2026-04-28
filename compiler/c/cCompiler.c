@@ -32,22 +32,60 @@ typedef struct LexToken
 {
     LexTokenEnum e;
 
-    char *tokenStart;
-    char *tokenEnd;
+    union
+    {
+        struct
+        {
+            char *tokenStart;
+            char *tokenEnd;
+        };
+
+        struct
+        {
+            size_t idx;
+        };
+    };
 } LexToken;
 
-char *poncutationTokens[]={
-    " ",
-    ".",
-    ",",
-    "\"",
-    "\'",
-    ";",
-    ":",
-    "{",
-    "}",
-    "\\\\"
+char ponctuationTokens[]={
+    ' ',
+    '.',
+    ',',
+    ';',
+    ':',
+    '(',
+    ')',
+    '{',
+    '}',
+    '[',
+    ']',
+    '=',
+    '+',
+    '-',
+    '*',
+    '/'
 };
+
+
+
+
+
+// return output size
+size_t preprocess(char *str,size_t strSize)
+{
+    char *out=str;
+    size_t outSize=0;
+    size_t outI=0;
+
+    bool isInString=false;
+    for(size_t i=0;i<strSize;++i)
+    {
+        if(str[i]=='\"')
+        {
+            
+        }
+    }
+}
 
 // Assume str is null-terminated
 void lex(LexToken **tokens,char *str,size_t strSize)
@@ -60,6 +98,7 @@ void lex(LexToken **tokens,char *str,size_t strSize)
         
     }
 }
+
 
 int main(int argc,char *argv[])
 {

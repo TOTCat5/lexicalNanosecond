@@ -1,0 +1,11 @@
+improt io all;
+
+main:int32()
+{
+    testStr:str="this is a string";
+    noError="\\ This shouldn't make any error and just give a backlash with this text after it";
+
+    println(testStr);
+    println(noError);
+}
+

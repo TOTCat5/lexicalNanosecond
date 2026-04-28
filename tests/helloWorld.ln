@@ -2,5 +2,8 @@ import io;
 
 main:int32()
 {
-    io.print("Hello World !\n");
+    \\ can be
+    \\ io.print("Hello World !\n");
+    \\ or
+    io.println("Hello World !");
 }
