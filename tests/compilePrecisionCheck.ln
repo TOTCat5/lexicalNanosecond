@@ -3,7 +3,7 @@ doSomeMath:uint64(x:int64[i%2],y:int64)=x*y;
 
 main:int32()
 {
-    
+    area:uint64=doSomeMath(3,3);
 
 
     return -1;

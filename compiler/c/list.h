@@ -13,6 +13,7 @@ typedef struct _d_ListHeader_
 #define listGetHeader(list) ((_d_ListHeader_ *)(list)-1)
 #define listLength(list)    (listGetHeader(list)->length)
 #define listCapacity(list)  (listGetHeader(list)->capacity)
+#define listType(type) type *
 
 static inline uint64_t next_pow2(uint64_t x)
 {

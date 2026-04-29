@@ -20,6 +20,6 @@ main:int32(argc:int32,argv:array(str))
         }
     }
 
-    io.print(str(count));
+    io.println(str(count));
     return 0;
 }
