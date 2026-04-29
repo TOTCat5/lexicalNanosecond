@@ -120,7 +120,7 @@ size_t preprocess(char *str,size_t strSize)
         out[outI++]=str[i];
         outSize++;
     }
-    
+    out[outI]='\0';
 
     return outSize;
 }
