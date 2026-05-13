@@ -1,8 +1,9 @@
 
 doSomeMath:uint64(x:int64[i%2],y:int64)=x*y;
 
-main:int32()
+main():int32
 {
+    \\ should give an error
     area:uint64=doSomeMath(3,3);
 
 

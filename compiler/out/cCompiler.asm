@@ -2,9 +2,9 @@ global _start
 extern ExitProcess
 section .text
 _start:
+    sub rsp,40
     call main
     mov rcx,rax
-    sub rsp,40
     call ExitProcess
     add rsp,40
 main:

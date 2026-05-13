@@ -1,7 +1,9 @@
 import io;
 
+import str all;
 
-main:int32(argc:int32,argv:array(str))
+
+main(argc:int32,argv:stackList(str)):int32
 {
     if(argc!=3)
     {

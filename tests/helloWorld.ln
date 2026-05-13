@@ -1,6 +1,6 @@
 import io;
 
-main:int32()
+main():int32
 {
     \\ can be
     \\ io.print("Hello World !\n");

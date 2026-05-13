@@ -37,6 +37,7 @@ static inline uint64_t next_pow2(uint64_t x)
         __qa_header_p_->capacity*=2;\
         __qa_header_p_=realloc(__qa_header_p_,sizeof(*__qa_header_p_)+__qa_header_p_->capacity*sizeof(*list));\
     }\
+    list=(void *)(__qa_header_p_+1);\
 } while(0);
 
 #define listPushBack(list,item) do{\

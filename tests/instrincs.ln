@@ -2,7 +2,7 @@ import bmi2;
 import io;
 
 
-main:int32(argc:int32,argv:stackList(str))
+main(argc:int32,argv:stackList(str)):int32
 {
     if(argc!=2)
     {

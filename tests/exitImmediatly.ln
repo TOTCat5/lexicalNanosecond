@@ -1,4 +1,4 @@
-main:int32()
+main():int32
 {
     \\ still uses return
     return  0;
