@@ -12,7 +12,7 @@ bool toggleString(char *str,size_t i,size_t strSize)
     {
         bool hasBackslash=false;
         size_t backslashI=i;
-        while(backslashI<=1)
+        while(backslashI>1)
         {
             if(str[backslashI-1]!='\\')
             {
@@ -22,7 +22,7 @@ bool toggleString(char *str,size_t i,size_t strSize)
             --backslashI;
         }
 
-        if(hasBackslash)
+        if(!hasBackslash)
         {
             return true;
         }
@@ -192,7 +192,6 @@ typedef struct LexToken
 
 char ponctuationTokens[]={
     ' ',
-    '.',
     ',',
     ';',
     ':',
@@ -246,8 +245,26 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
     size_t startStrI=-1;
 
+    bool isInString=false;
+    bool wasInString=isInString;
     for(size_t i=0;i<strSize;++i)
     {
+        isInString^=toggleString(str,i,strSize);
+        if(isInString)
+        {
+            continue;
+        }
+        if((!isInString)&&wasInString)
+        {
+            LexToken token={
+                .e=LEX_TOKEN_CONSTANT,
+                .str=str+startStrI,
+                .strLen=i-startStrI+1
+            };
+            startStrI=i;
+            listPushBack(tokenList,token);
+        }
+        wasInString=isInString;
         
         // If i get to reach this one I swear to god I delete this project
         size_t foundIdx=checkForPonctuationToken(str[i]);
@@ -277,6 +294,13 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
     *pTokens=tokenList;
 }
+
+
+
+
+
+
+
 
 void compile(char *str,size_t strSize)
 {
@@ -337,7 +361,7 @@ int main(int argc,char *argv[])
         "    ret"
     );
 
-    FILE *inFile=fopen("tests/helloWorld.ln","rb");
+    FILE *inFile=fopen("tests/floatingPointValidity.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

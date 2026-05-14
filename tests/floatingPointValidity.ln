@@ -1,0 +1,8 @@
+import io all;
+import str all;
+
+main():int32
+{
+    i:float=1.0;
+    println(str(i));
+}
