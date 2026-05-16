@@ -46,4 +46,18 @@ static inline uint64_t next_pow2(uint64_t x)
     list[__qa_header_p_->length++]=item;\
 } while(0)
 
+#define listEmplace(list,item,idx) do{\
+    listMemoryCheck(list)\
+    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    memmove((list)+idx+1,list+idx,(__qa_header_p_->length-idx)*sizeof(*list));\
+    [idx]=item;\
+    __qa_header_p_->length++;\
+} while(0)
+
+#define listRemoveAtIndex(list,idx) do{\
+    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    memmove(list+idx,list+idx+1,(__qa_header_p_->length-idx-1)*sizeof(*list));\
+    __qa_header_p_->length--;\
+} while(0)
+
 #endif

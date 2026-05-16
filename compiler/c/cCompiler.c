@@ -97,6 +97,8 @@ size_t preprocess(char *str,size_t strSize)
         }
         if(found)
         {
+            out[outI++]=' ';
+            ++outSize;
             continue;
         }
 
@@ -150,7 +152,8 @@ size_t preprocess(char *str,size_t strSize)
     X(LEX_TOKEN_UNTIL)\
     X(LEX_TOKEN_WHILE)\
     X(LEX_TOKEN_IF)\
-    X(KEX_TOKEN_RETURN)
+    X(LEX_TOKEN_RETURN)\
+    X(LEX_TOKEN_AS)
 
 
 typedef enum LexTokenEnum
@@ -193,6 +196,7 @@ typedef struct LexToken
 char ponctuationTokens[]={
     ' ',
     ',',
+    '.',
     ';',
     ':',
     '(',
@@ -206,18 +210,13 @@ char ponctuationTokens[]={
     '-',
     '*',
     '/',
+    '&',
+    '^',
+    '|',
     '!'
 };
 
-char *keywords[]={
-    "import",
-    "for",
-    "from",
-    "to",
-    "until",
-    "if",
-    "return"
-};
+
 
 #define NO_TOKEN SIZE_MAX
 size_t checkForPonctuationToken(char token)
@@ -235,6 +234,56 @@ size_t checkForPonctuationToken(char token)
 }
 
 
+#define KEYWORDS_LIST\
+    X("import")\
+    X("for")\
+    X("from")\
+    X("to")\
+    X("until")\
+    X("while")\
+    X("if")\
+    X("return")\
+    X("as")
+
+bool isTokenDecimalInteger(LexToken *token)
+{
+    if(token->e!=LEX_TOKEN_PONCTUATION)
+    {
+        for(size_t i=0;i<token->strLen;++i)
+        {
+            char t=token->str[i];
+            if(!(t>='0'&&t<='9'))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+bool isTokenHexInteger(LexToken *token)
+{
+    if(token->e!=LEX_TOKEN_PONCTUATION&&token->strLen>2)
+    {
+        if(token->str[0]=='0'&&token->str[1]=='x')
+        {
+            for(size_t i=token->strLen-1;i>2;--i)
+            {
+                char t=token->str[i];
+                if(!(
+                    (t>='0'&&t<='9')||
+                    (t>='a'&&t<='f')
+                ))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
 
 
 // Assume str is null-terminated
@@ -291,18 +340,195 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
     }
 
+    #define X(x) x,
+    char *keywords[]={
+        KEYWORDS_LIST
+    };
+    #undef X
+    #define X(x) sizeof(x)-1,
+    size_t lengths[]={
+        KEYWORDS_LIST
+    };
+    #undef X
+    size_t tokenListSize=listLength(tokenList);
+    for(size_t i=0;i<tokenListSize;++i)
+    {
+        if(tokenList[i].e==LEX_TOKEN_UNDEFINED)
+        {
+            size_t keywordIdx=SIZE_MAX;
+            for(size_t j=0;j<sizeof(keywords)/sizeof(*keywords);++j)
+            {
+                if(lengths[j]==tokenList[i].strLen)
+                {
+                    if(strncmp(keywords[j],tokenList[i].str,lengths[j])==0)
+                    {
+                        keywordIdx=j;
+                        break;
+                    }
+                }
+            }
+            if(keywordIdx!=SIZE_MAX)
+            {
+                tokenList[i].e=LEX_TOKEN_IMPORT+keywordIdx;
+                continue;
+            }
+
+            bool isDecimalNumber=isTokenDecimalInteger(tokenList+i);
+            if(isDecimalNumber)
+            {
+                tokenList[i].e=LEX_TOKEN_CONSTANT;
+                if(i<tokenListSize-2)
+                {
+                    bool isFloatNumber=tokenList[i+1].e==LEX_TOKEN_PONCTUATION&&
+                                        tokenList[i+1].ponctuation.c=='.'&&
+                                        isTokenDecimalInteger(tokenList+i+2);
+                    if(isFloatNumber)
+                    {
+                        listRemoveAtIndex(tokenList,i+1);
+                        tokenList[i].strLen+=1+tokenList[i+1].strLen;
+                        listRemoveAtIndex(tokenList,i+1);
+                        tokenListSize-=2;
+                        i-=2;
+                    }
+                }
+                continue;
+            }
+
+            bool isHexNumber=isTokenHexInteger(tokenList+i);
+            if(isHexNumber)
+            {
+                tokenList[i].e=LEX_TOKEN_CONSTANT;
+                continue;
+            }
+
+            tokenList[i].e=LEX_TOKEN_ID;
+
+        }
+
+        if(tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i].ponctuation.c==' ')
+        {
+            listRemoveAtIndex(tokenList,i);
+            i-=1;
+            tokenListSize--;
+        }
+    }
+
 
     *pTokens=tokenList;
 }
 
 
+#define AST_NODE_ENUM\
+    X(AST_NODE_CONSTANT)\
+    X(AST_NODE_BINARY_OPERATION)\
+    X(AST_NODE_IF)\
+    X(AST_NODE_VARIABLE_ASSIGNMENT)\
+    X(AST_NODE_STATEMENT_LIST_NODE)\
+    X(AST_NODE_RETURN)\
+    X(AST_NODE_CALL_FUNC)\
+    X(AST_NODE_DEF_FUNC)\
+
+
+
+typedef enum AST_NodeEnum
+{
+    #define X(x) x,
+    AST_NODE_ENUM
+    #undef X
+} AST_NodeEnum;
+
+const char *string_AST_NodeEnum(AST_NodeEnum e)
+{
+    switch(e)
+    {
+        #define X(x) case x: return #x;
+        AST_NODE_ENUM
+        #undef X
+    }
+    return __func__;
+}
+
+#define AST_NODE_BINARY_CONDITION_ENUM\
+    X(AST_NODE_BINARY_CONDITION_EQUAL)\
+    X(AST_NODE_BINARY_CONDITION_LESS_THAN)\
+    X(AST_NODE_BINARY_CONDITION_GREATER_THAN)\
+    X(AST_NODE_BINARY_CONDITION_EQUAL_OR_GREATER_THAN)\
+    X(AST_NODE_BINARY_CONDITION_EQUAL_OR_LESS_THAN)\
+
+typedef enum AST_NodeBinaryConditionEnum
+{
+    #define X(x) x,
+    AST_NODE_BINARY_CONDITION_ENUM
+    #undef X
+} AST_NodeBinaryConditionEnum;
+
+const char *string_AST_NodeBinaryConditionEnum(AST_NodeBinaryConditionEnum e)
+{
+    switch(e)
+    {
+        #define X(x) case x: return #x;
+        AST_NODE_BINARY_CONDITION_ENUM
+        #undef X
+    }
+    return __func__;
+}
+    
+
+
+typedef struct AST_Node AST_Node;
+struct AST_Node
+{
+    AST_NodeEnum e;
+    union
+    {
+        struct
+        {
+            LexToken *token;
+        } constantNode;
+
+        struct
+        {
+            AST_Node *leftExpr;
+            AST_NodeBinaryConditionEnum e;
+            AST_Node *rightExpr;
+        } binaryConditionNode;
+
+        struct
+        {
+            AST_Node *condition;
+            AST_Node *ifNode;
+            AST_Node *elseNode;
+        } ifNode;
+
+        struct
+        {
+            AST_Node *var;
+            AST_Node *expr;
+        } varAssignmentNode;
+        
+        struct
+        {
+            AST_Node *statement;
+            AST_Node *next;
+        } statementListNodeNode;
+
+        struct
+        {
+
+        } callFuncNode;
+
+        struct
+        {
+            AST_Node *executedNode;
+            AST_Node *callArgListNode;
+        } defFuncNode;
+    };
+};
 
 
 
 
-
-
-void compile(char *str,size_t strSize)
+void compile(char *str,size_t strSize,FILE *outFile)
 {
     listType(LexToken) tokens=NULL;
     
@@ -328,6 +554,14 @@ void compile(char *str,size_t strSize)
                 printf(",\n\t\t.str=\"%.*s\"",tokens[i].strLen,tokens[i].str);
             break;
 
+            case LEX_TOKEN_CONSTANT:
+                printf(",\n\t\t.str=\"%.*s\"",tokens[i].strLen,tokens[i].str);
+            break;
+
+            case LEX_TOKEN_ID:
+                printf(",\n\t\t.str=\"%.*s\"",tokens[i].strLen,tokens[i].str);
+            break;
+
         }
 
         printf("\n\t},");
@@ -336,32 +570,15 @@ void compile(char *str,size_t strSize)
     #endif
 }
 
+
+
+
 int main(int argc,char *argv[])
 {
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
-    fprintf(outFile,
-        "global _start\n"
-        "extern ExitProcess\n"
-    );
 
-    fprintf(outFile,
-        "section .text\n"
-        "_start:\n"
-        "    sub rsp,40\n"
-        "    call main\n"
-        "    mov rcx,rax\n"
-        "    call ExitProcess\n"
-        "    add rsp,40\n"
-    );
-
-    fprintf(outFile,
-        "main:\n"
-        "    xor rax,rax\n"
-        "    ret"
-    );
-
-    FILE *inFile=fopen("tests/floatingPointValidity.ln","rb");
+    FILE *inFile=fopen("tests/VGA_ScreenWriting.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);
@@ -369,7 +586,7 @@ int main(int argc,char *argv[])
 
     char *buf=malloc(fileSize);
     fread(buf,fileSize,1,inFile);
-    compile(buf,fileSize);
+    compile(buf,fileSize,outFile);
 
 
 }

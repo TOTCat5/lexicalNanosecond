@@ -1,6 +1,5 @@
 import io;
 
-import str all;
 
 
 main(argc:int32,argv:stackList(str)):int32

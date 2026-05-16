@@ -1,0 +1,38 @@
+
+
+struct VGA_ScreenCharacter
+{
+    c:int8;
+    color:uint8;
+}
+
+screenBuf:ptr(VGA_ScreenCharacter)=0xb8000;
+cursorPtr:ptr(VGA_ScreenCharacter)=screenBuf;
+
+putChar(t:char):void
+{
+    if([str]==10)
+    {
+        cursorPtr/=80;
+        cursorPtr*=80;
+    }
+    if([str]==13)
+    {
+        cursorPtr+=79;
+        cursorPtr/=80;
+        cursorPtr*=80;
+    }
+    [cursorPtr].c=[str];
+    [cursorPtr].color=0x0f;
+    cursorPtr++;
+}
+
+print(str:ptr(char)):void
+{
+    while([str]!=0)
+    {
+        putChar([str]);
+        str++;
+    }
+}
+

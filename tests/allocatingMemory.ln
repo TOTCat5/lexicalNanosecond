@@ -1,4 +1,4 @@
-import memory_management as mem
+import memory_management as mem;
 
 main():int32
 {
