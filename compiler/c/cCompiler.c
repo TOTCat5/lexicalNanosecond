@@ -514,8 +514,13 @@ struct AST_Node
 
         struct
         {
-
+            AST_Node *calledFunc;
         } callFuncNode;
+
+        struct
+        {
+            AST_Node *returnedExpr;
+        } returnNode;
 
         struct
         {
@@ -525,6 +530,10 @@ struct AST_Node
     };
 };
 
+
+AST_Node *parse(listType(LexToken),arenaType(AST_Node)  arena)
+{
+}
 
 
 
