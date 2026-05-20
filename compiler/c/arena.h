@@ -12,15 +12,29 @@
 typedef struct ArenaHeader
 {
     size_t capacity;
-    uint64_t bitset[ARENA_MAX_CAPACITY/64];
-}
+    void *offset;
+} ArenaHeader;
 
 #define arenaGetHeader(x) ((ArenaHeader *)x-1)
 
-#define createArena(arena,capacity) do{\
+#define arenaCreate(arena,capacity) do{\
     ArenaHeader *header=calloc(sizeof(*header)+sizeof(*arena)*(capacity),1);\
     header->capacity=capacity;
     arena=(void *)(header+1);\
 } while(0)
+
+void *arenaAllocFunc(void *arena,size_t size)
+{
+    ArenaHeader *header=arenaGetHeader(arena);
+
+    header->offset+=size;
+    if(header->offset-(void *)arena>header->capacity)
+    {
+        return NULL;
+    }
+    return header->offset-size;
+}
+
+#define arenaAlloc(arena,size) arenaAllocFunc((void *)arena,size)
 
 #endif
