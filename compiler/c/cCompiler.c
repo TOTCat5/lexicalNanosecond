@@ -426,6 +426,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
     X(AST_NODE_STATEMENT_LIST_NODE)\
     X(AST_NODE_RETURN)\
     X(AST_NODE_CALL_FUNC)\
+    X(AST_NODE_DEF_VAR)\
     X(AST_NODE_DEF_FUNC)\
 
 
@@ -524,6 +525,11 @@ struct AST_Node
 
         struct
         {
+            LexToken token;
+        } defVarNode;
+
+        struct
+        {
             AST_Node *executedNode;
             AST_Node *callArgListNode;
         } defFuncNode;
@@ -531,8 +537,11 @@ struct AST_Node
 };
 
 
-AST_Node *parse(listType(LexToken),arenaType(AST_Node)  arena)
+AST_Node *parse(listType(LexToken) tokenList,arenaType(AST_Node) arena)
 {
+    for(size_t i=0;i<listGetLength(i);++i)
+    {
+    }
 }
 
 
