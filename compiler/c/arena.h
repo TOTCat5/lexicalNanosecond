@@ -19,11 +19,11 @@ typedef struct ArenaHeader
 
 #define arenaCreate(arena,capacity) do{\
     ArenaHeader *header=calloc(sizeof(*header)+sizeof(*arena)*(capacity),1);\
-    header->capacity=capacity;
+    header->capacity=capacity;\
     arena=(void *)(header+1);\
 } while(0)
 
-void *arenaAllocFunc(void *arena,size_t size)
+static void *arenaAllocFunc(void *arena,size_t size)
 {
     ArenaHeader *header=arenaGetHeader(arena);
 
