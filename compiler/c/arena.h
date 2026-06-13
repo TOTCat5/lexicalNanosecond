@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <malloc.h>
 
-#define arenaType(type) type *
+#define arenaType(type) void *
 
 
 #define ARENA_MAX_CAPACITY (1<<11)
@@ -17,10 +17,10 @@ typedef struct ArenaHeader
 
 #define arenaGetHeader(x) ((ArenaHeader *)x-1)
 
-#define arenaCreate(arena,capacity) do{\
-    ArenaHeader *header=calloc(sizeof(*header)+sizeof(*arena)*(capacity),1);\
-    header->capacity=capacity;\
-    arena=(void *)(header+1);\
+#define arenaCreate(arena,byteCount) do{\
+    ArenaHeader *h_e_a_d_e_r=calloc(sizeof(*h_e_a_d_e_r)+(byteCount),1);\
+    h_e_a_d_e_r->capacity=capacity;\
+    arena=(void *)(h_e_a_d_e_r+1);\
 } while(0)
 
 static void *arenaAllocFunc(void *arena,size_t size)

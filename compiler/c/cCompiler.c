@@ -154,7 +154,8 @@ size_t preprocess(char *str,size_t strSize)
     X(LEX_TOKEN_WHILE)\
     X(LEX_TOKEN_IF)\
     X(LEX_TOKEN_RETURN)\
-    X(LEX_TOKEN_AS)
+    X(LEX_TOKEN_AS)\
+    X(LEX_TOKEN_STRUCT)
 
 
 typedef enum LexTokenEnum
@@ -244,7 +245,8 @@ size_t checkForPonctuationToken(char token)
     X("while")\
     X("if")\
     X("return")\
-    X("as")
+    X("as")\
+    X("token")
 
 bool isTokenDecimalInteger(LexToken *token)
 {
@@ -261,6 +263,28 @@ bool isTokenDecimalInteger(LexToken *token)
         return true;
     }
     return false;
+}
+
+bool isTokenString(LexToken *token)
+{
+    if(token->strLen<2)
+    {
+        return false;
+    }
+
+    if(
+        (token->str[0]=='\"')&&
+        (token->str[token->strLen-1]=='\"')
+    )
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool isTokenHexInteger(LexToken *token)
@@ -351,8 +375,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
         KEYWORDS_LIST
     };
     #undef X
-    size_t tokenListSize=listLength(tokenList);
-    for(size_t i=0;i<tokenListSize;++i)
+    for(size_t i=0;i<listLength(tokenList);++i)
     {
         if(tokenList[i].e==LEX_TOKEN_UNDEFINED)
         {
@@ -374,11 +397,18 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                 continue;
             }
 
+            bool isAString=isTokenString(tokenList+i);
+            if(isAString)
+            {
+                tokenList[i].e=LEX_TOKEN_CONSTANT;
+                continue;
+            }
+
             bool isDecimalNumber=isTokenDecimalInteger(tokenList+i);
             if(isDecimalNumber)
             {
                 tokenList[i].e=LEX_TOKEN_CONSTANT;
-                if(i<tokenListSize-2)
+                if(i<listLength(tokenList)-2)
                 {
                     bool isFloatNumber=tokenList[i+1].e==LEX_TOKEN_PONCTUATION&&
                                         tokenList[i+1].ponctuation.c=='.'&&
@@ -388,7 +418,6 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                         listRemoveAtIndex(tokenList,i+1);
                         tokenList[i].strLen+=1+tokenList[i+1].strLen;
                         listRemoveAtIndex(tokenList,i+1);
-                        tokenListSize-=2;
                         i-=2;
                     }
                 }
@@ -410,7 +439,6 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
         {
             listRemoveAtIndex(tokenList,i);
             i-=1;
-            tokenListSize--;
         }
     }
 
@@ -420,15 +448,12 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
 
 #define AST_NODE_ENUM\
-    X(AST_NODE_CONSTANT)\
-    X(AST_NODE_BINARY_OPERATION)\
-    X(AST_NODE_IF)\
-    X(AST_NODE_VARIABLE_ASSIGNMENT)\
-    X(AST_NODE_STATEMENT_LIST_NODE)\
+    X(AST_NODE_STATEMENT_LIST)\
+    X(AST_NODE_VAR_ASSIGNEMENT)\
+    X(AST_NODE_EXPRESSION)\
     X(AST_NODE_RETURN)\
-    X(AST_NODE_CALL_FUNC)\
-    X(AST_NODE_DEF_VAR)\
-    X(AST_NODE_DEF_FUNC)\
+    X(AST_NODE_VAR)\
+    X(AST_NODE_CALLING_FUNC)\
 
 
 
@@ -450,26 +475,35 @@ const char *string_AST_NodeEnum(AST_NodeEnum e)
     return __func__;
 }
 
-#define AST_NODE_BINARY_CONDITION_ENUM\
-    X(AST_NODE_BINARY_CONDITION_EQUAL)\
-    X(AST_NODE_BINARY_CONDITION_LESS_THAN)\
-    X(AST_NODE_BINARY_CONDITION_GREATER_THAN)\
-    X(AST_NODE_BINARY_CONDITION_EQUAL_OR_GREATER_THAN)\
-    X(AST_NODE_BINARY_CONDITION_EQUAL_OR_LESS_THAN)\
+#define AST_NODE_OPERATION_ENUM\
+    X(AST_NODE_OPERATION_ADD)\
+    X(AST_NODE_OPERATION_SUB)\
+    X(AST_NODE_OPERATION_MUL)\
+    X(AST_NODE_OPERATION_DIV)\
+    X(AST_NODE_OPERATION_BOOLEAN_EQUAL)\
+    X(AST_NODE_OPERATION_BOOLEAN_NOT_EQUAL)\
+    X(AST_NODE_OPERATION_BOOLEAN_LESS_THAN)\
+    X(AST_NODE_OPERATION_BOOLEAN_GREATER_THAN)\
+    X(AST_NODE_OPERATION_BOOLEAN_EQUAL_OR_GREATER_THAN)\
+    X(AST_NODE_OPERATION_BOOLEAN_EQUAL_OR_LESS_THAN)\
+    X(AST_NODE_OPERATION_BOOLEAN_AND)\
+    X(AST_NODE_OPERATION_BOOLEAN_NOT)\
+    X(AST_NODE_OPERATION_BOOLEAN_OR)\
+    X(AST_NODE_OPERATION_BOOLEAN_XOR)\
 
-typedef enum AST_NodeBinaryConditionEnum
+typedef enum AST_NodeOperationEnum
 {
     #define X(x) x,
-    AST_NODE_BINARY_CONDITION_ENUM
+    AST_NODE_OPERATION_ENUM
     #undef X
-} AST_NodeBinaryConditionEnum;
+} AST_NodeOperationEnum;
 
-const char *string_AST_NodeBinaryConditionEnum(AST_NodeBinaryConditionEnum e)
+const char *string_AST_NodeOperationEnum(AST_NodeOperationEnum e)
 {
     switch(e)
     {
         #define X(x) case x: return #x;
-        AST_NODE_BINARY_CONDITION_ENUM
+        AST_NODE_OPERATION_ENUM
         #undef X
     }
     return __func__;
@@ -485,64 +519,81 @@ struct AST_Node
     {
         struct
         {
-            LexToken *token;
-        } constantNode;
+            AST_Node *node;
+            AST_Node *next;
+        } statementListNode;
 
         struct
         {
             AST_Node *leftExpr;
-            AST_NodeBinaryConditionEnum e;
             AST_Node *rightExpr;
-        } binaryConditionNode;
+        } varAssignementNode;
 
         struct
         {
-            AST_Node *condition;
-            AST_Node *ifNode;
-            AST_Node *elseNode;
-        } ifNode;
+            AST_Node *left;
+            AST_Node *right;
+            AST_NodeOperationEnum op;
+        } expressionNode;
 
         struct
         {
-            AST_Node *var;
             AST_Node *expr;
-        } varAssignmentNode;
-        
-        struct
-        {
-            AST_Node *statement;
-            AST_Node *next;
-        } statementListNodeNode;
-
-        struct
-        {
-            AST_Node *calledFunc;
-        } callFuncNode;
-
-        struct
-        {
-            AST_Node *returnedExpr;
         } returnNode;
 
         struct
         {
-            LexToken token;
-        } defVarNode;
+            char *name;
+            size_t nameLen;
+            uint64_t typeIdx;
+
+            uint64_t modifierIdx;
+
+            AST_Node *argList;
+            AST_Node *code;
+        } varNode;
 
         struct
         {
-            AST_Node *executedNode;
-            AST_Node *callArgListNode;
-        } defFuncNode;
+            AST_Node *func;
+
+            AST_Node *args;
+        } callingFuncNode;
+
     };
 };
 
 
-AST_Node *parse(listType(LexToken) tokenList,arenaType(AST_Node) arena)
+#define sizeOfNode(nodeName) (offsetof(AST_Node,statementListNode)+sizeof(((AST_Node){0}). nodeName))
+
+
+AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
 {
-    for(size_t i=0;i<listGetLength(i);++i)
+    for(size_t i=0;i<tokenCount;++i)
     {
+        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        {
+            if(tokens[i].ponctuation.c==';')
+            {
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
+
+                result->e=AST_NODE_STATEMENT_LIST;
+                result->statementListNode.node=parseFunc(tokens,i,arena);
+                result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+
+                return result;
+            }
+        }
     }
+}
+
+
+bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **start)
+{
+    *start=parseFunc(tokenList,listLength(tokenList),arena);
+
+    return false;
+    
 }
 
 
@@ -597,7 +648,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
 
-    FILE *inFile=fopen("tests/VGA_ScreenWriting.ln","rb");
+    FILE *inFile=fopen("tests/helloWorld.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);
