@@ -538,20 +538,21 @@ struct AST_Node
 
         struct
         {
+            LexToken *nameToken;
+            LexToken *typeToken;
+        } varNode;
+
+        struct
+        {
             AST_Node *expr;
         } returnNode;
 
         struct
         {
-            char *name;
-            size_t nameLen;
-            uint64_t typeIdx;
-
-            uint64_t modifierIdx;
-
-            AST_Node *argList;
+            LexToken *funcToken;
+            LexToken *typeToken;
             AST_Node *code;
-        } varNode;
+        } defFuncNode;
 
         struct
         {
@@ -573,16 +574,43 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
     {
         if(tokens[i].e==LEX_TOKEN_PONCTUATION)
         {
-            if(tokens[i].ponctuation.c==';')
+            char ponctuation=tokens[i].ponctuation.c;
+
+            if(ponctuation==';')
             {
+                if(tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION)
+                {
+                    if(tokens[tokenCount-1].ponctuation.c!=';')
+                    {
+                        fprintf(stderr,"Need a \';\' at token \"%*s\"",tokens[tokenCount-1].strLen,tokens[tokenCount-1].str);
+                        return NULL;
+                    }
+                }
+
                 AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
 
                 result->e=AST_NODE_STATEMENT_LIST;
                 result->statementListNode.node=parseFunc(tokens,i,arena);
-                result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+                if(result->statementListNode.node==NULL)
+                {
+                    return NULL;
+                }
+
+                result->statementListNode.next=NULL;
+
+                if(i!=tokenCount-1)
+                {
+                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+                }
 
                 return result;
             }
+
+        }
+
+        if(tokens[i].e==LEX_TOKEN_RETURN)
+        {
+            
         }
     }
 }
@@ -592,7 +620,7 @@ bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **sta
 {
     *start=parseFunc(tokenList,listLength(tokenList),arena);
 
-    return false;
+    return *start==NULL;
     
 }
 
@@ -648,7 +676,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
 
-    FILE *inFile=fopen("tests/helloWorld.ln","rb");
+    FILE *inFile=fopen("tests/exitImmediatly.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

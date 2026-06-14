@@ -37,4 +37,6 @@ static void *arenaAllocFunc(void *arena,size_t size)
 
 #define arenaAlloc(arena,size) arenaAllocFunc((void *)arena,size)
 
+#define arenaDestroy(arena) do{free(arenaGetHeader(arena));} while(0)
+
 #endif
