@@ -451,8 +451,10 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
     X(AST_NODE_STATEMENT_LIST)\
     X(AST_NODE_VAR_ASSIGNEMENT)\
     X(AST_NODE_EXPRESSION)\
+    X(AST_NODE_DEC_VAR)\
     X(AST_NODE_RETURN)\
-    X(AST_NODE_VAR)\
+    X(AST_NODE_DEF_FUNC)\
+    X(AST_NODE_DEC_FUNC)\
     X(AST_NODE_CALLING_FUNC)\
 
 
@@ -540,7 +542,7 @@ struct AST_Node
         {
             LexToken *nameToken;
             LexToken *typeToken;
-        } varNode;
+        } decVarNode;
 
         struct
         {
@@ -549,10 +551,24 @@ struct AST_Node
 
         struct
         {
-            LexToken *funcToken;
-            LexToken *typeToken;
+            AST_Node *arg;
+            AST_Node *next;
+        } funcArgListNode;
+        
+
+        struct
+        {
+            AST_Node *func;
+
             AST_Node *code;
         } defFuncNode;
+
+        struct
+        {
+            LexToken *funcToken;
+            LexToken *typeToken;
+            AST_Node *argList;
+        } decFuncNode;
 
         struct
         {
@@ -607,10 +623,18 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
             }
 
         }
+    }
 
+    for(size_t i=0;i<tokenCount;++i)
+    {
         if(tokens[i].e==LEX_TOKEN_RETURN)
         {
-            
+            AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
+
+            result->e=AST_NODE_RETURN;
+            result->returnNode.expr=parseFunc(tokens+1,tokenCount-1,arena);
+
+            return result;
         }
     }
 }
@@ -625,6 +649,19 @@ bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **sta
 }
 
 
+#define printTreeExpr for(size_t depthIdx=0;depthIdx<depth;++depthIdx){printf("    ");}
+
+void printTree(AST_Node *node)
+{
+    static int depth=0;
+    switch(node->e)
+    {
+        case AST_NODE_STATEMENT_LIST:
+            printTreeExpr
+
+            printf("statementList:\n");
+    }
+}
 
 void compile(char *str,size_t strSize,FILE *outFile)
 {
@@ -665,6 +702,8 @@ void compile(char *str,size_t strSize,FILE *outFile)
         printf("\n\t},");
     }
     printf("\b \n}\n");
+
+
     #endif
 }
 
