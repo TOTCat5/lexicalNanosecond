@@ -721,6 +721,8 @@ void printTree(AST_Node *node)
             printf("rightExpr:\n");
 
             printTree(node->varAssignementNode.rightExpr);
+
+            depth--;
         break;
 
         case AST_NODE_EXPRESSION:
@@ -761,6 +763,71 @@ void printTree(AST_Node *node)
             depth--;
         break;
 
+        case AST_NODE_RETURN:
+            printTreeExpr
+            printf("return:\n");
+            
+            depth++;
+            printTree(node->returnNode.expr);
+            depth--;
+        break;
+
+        case AST_NODE_DEF_FUNC:
+            printTreeExpr
+            printf("defFunc:\n");
+
+
+            depth++;
+
+            printTreeExpr
+            printf("func:\n");
+            printTree(node->defFuncNode.func);
+
+            printTreeExpr
+            printf("code:\n");
+            printTree(node->defFuncNode.code);
+
+            depth--;
+        break;
+
+        case AST_NODE_DEC_FUNC:
+            printTreeExpr
+            printf("decFunc:\n");
+
+
+
+            depth++;
+
+            printTreeExpr
+            printf("nameToken=%.*s\n",node->decFuncNode.funcToken->strLen,node->decFuncNode.funcToken->str);
+
+            printTreeExpr
+            printf("typeToken=%.*s\n",node->decFuncNode.typeToken->strLen,node->decFuncNode.typeToken->str);
+
+            printTreeExpr
+            printf("argList:\n");
+            printTree(node->decFuncNode.argList);
+
+            depth--;
+
+        break;
+
+        case AST_NODE_CALLING_FUNC:
+            printTreeExpr
+            printf("callingFunc:\n");
+
+            depth++;
+
+            printTreeExpr
+            printf("func:\n");
+            printTree(node->callingFuncNode.func);
+
+            printTreeExpr
+            printf("args:\n");
+            printTree(node->callingFuncNode.args);
+
+            depth--;
+        break;
 
     }
 }
