@@ -586,13 +586,46 @@ struct AST_Node
 
 AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
 {
+    if(tokenCount==0)
+    {
+        return NULL;
+    }
+
+    size_t bracesCount=0;
     for(size_t i=0;i<tokenCount;++i)
     {
         if(tokens[i].e==LEX_TOKEN_PONCTUATION)
         {
             char ponctuation=tokens[i].ponctuation.c;
 
-            if(ponctuation==';')
+            if(ponctuation=='{')
+            {
+                bracesCount++;
+            }
+            if(ponctuation=='}')
+            {
+                bracesCount--;
+            }
+
+            if(ponctuation=='(')
+            {
+                bracesCount++;
+            }
+            if(ponctuation==')')
+            {
+                bracesCount--;
+            }
+
+            if(ponctuation=='[')
+            {
+                bracesCount++;
+            }
+            if(ponctuation==']')
+            {
+                bracesCount--;
+            }
+
+            if(ponctuation==';'&&bracesCount==0)
             {
                 if(tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION)
                 {
@@ -627,6 +660,12 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
 
     for(size_t i=0;i<tokenCount;++i)
     {
+        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        {
+            
+        }
+
+
         if(tokens[i].e==LEX_TOKEN_RETURN)
         {
             AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
@@ -658,8 +697,71 @@ void printTree(AST_Node *node)
     {
         case AST_NODE_STATEMENT_LIST:
             printTreeExpr
-
             printf("statementList:\n");
+
+            depth++;
+            printTree(node->statementListNode.node);
+            if(node->statementListNode.next!=NULL)
+            {
+                printTree(node->statementListNode.next);
+            }
+            depth--;
+        break;
+
+        case AST_NODE_VAR_ASSIGNEMENT:
+            printf("varAssignementNode:\n");
+            depth++;
+
+            printTreeExpr
+            printf("leftExpr:\n");
+
+            printTree(node->varAssignementNode.leftExpr);
+
+            printTreeExpr
+            printf("rightExpr:\n");
+
+            printTree(node->varAssignementNode.rightExpr);
+        break;
+
+        case AST_NODE_EXPRESSION:
+            printTreeExpr
+            printf("expression:\n");
+
+            depth++;
+
+            printTreeExpr
+            printf("op:%s\n",string_AST_NodeOperationEnum(node->expressionNode.op));
+            
+            if(node->expressionNode.left!=NULL)
+            {
+                printTreeExpr
+                printf("left:\n");
+
+                printTree(node->expressionNode.left);
+            }
+            printTreeExpr
+            printf("right:\n");
+
+            printTree(node->expressionNode.right);
+
+            depth--;
+        break;
+
+        case AST_NODE_DEC_VAR:
+            printTreeExpr    
+            printf("decVar:\n");
+
+            depth++;
+            printTreeExpr
+            printf("nameToken=%.*s\n",node->decVarNode.nameToken->strLen,node->decVarNode.nameToken->str);
+
+            printTreeExpr
+            printf("typeToken=%.*s\n",node->decVarNode.typeToken->strLen,node->decVarNode.typeToken->str);
+
+            depth--;
+        break;
+
+
     }
 }
 
