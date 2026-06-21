@@ -449,13 +449,16 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
 #define AST_NODE_ENUM\
     X(AST_NODE_STATEMENT_LIST)\
-    X(AST_NODE_VAR_ASSIGNEMENT)\
+    X(AST_NODE_ASSIGNEMENT)\
     X(AST_NODE_EXPRESSION)\
     X(AST_NODE_DEC_VAR)\
     X(AST_NODE_RETURN)\
+    X(AST_NODE_VALUE_LIST)\
     X(AST_NODE_DEF_FUNC)\
     X(AST_NODE_DEC_FUNC)\
     X(AST_NODE_CALLING_FUNC)\
+    X(AST_NODE_CONSTANT)\
+    X(AST_NODE_VAR)\
 
 
 
@@ -529,7 +532,7 @@ struct AST_Node
         {
             AST_Node *leftExpr;
             AST_Node *rightExpr;
-        } varAssignementNode;
+        } assignementNode;
 
         struct
         {
@@ -551,9 +554,9 @@ struct AST_Node
 
         struct
         {
-            AST_Node *arg;
+            AST_Node *constant;
             AST_Node *next;
-        } funcArgListNode;
+        } valueListNode;
         
 
         struct
@@ -576,6 +579,16 @@ struct AST_Node
 
             AST_Node *args;
         } callingFuncNode;
+
+        struct
+        {
+            LexToken *token;
+        } constantNode;
+
+        struct
+        {
+            LexToken *token;
+        } varNode;
 
     };
 };
@@ -660,9 +673,51 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
 
     for(size_t i=0;i<tokenCount;++i)
     {
-        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        if(tokens[i].e==LEX_TOKEN_ID)
         {
-            
+            if(i+1<tokenCount)
+            {
+                if(tokens[i].e==LEX_TOKEN_PONCTUATION&&tokens[i].ponctuation.c=='(')
+                {
+                    // But Also '{' and '['
+                    size_t parenthesesCount=0;
+
+                    bool funcPlusDef=false;
+
+                    size_t endParentheses=i;
+                    while(
+                        endParentheses<tokenCount&&
+                        !(parenthesesCount==0&&tokens[i].e==LEX_TOKEN_PONCTUATION&&
+                            (
+                                tokens[i].ponctuation.c==')'||
+                                tokens[i].ponctuation.c=='}'||
+                                tokens[i].ponctuation.c==']'
+                            )
+                        )
+                    )
+                    {
+                        if(
+                            tokens[i].ponctuation.c=='('||
+                            tokens[i].ponctuation.c=='{'||
+                            tokens[i].ponctuation.c=='['
+                        )
+                        {
+                            parenthesesCount++;
+                        }
+                        else if(
+                            tokens[i].ponctuation.c==')'||
+                            tokens[i].ponctuation.c=='}'||
+                            tokens[i].ponctuation.c==']'
+                        )
+                        {
+                            parenthesesCount--;
+                        }
+
+                        ++endParentheses;
+                    }
+                }
+                
+            }
         }
 
 
@@ -700,27 +755,37 @@ void printTree(AST_Node *node)
             printf("statementList:\n");
 
             depth++;
+            if(node->statementListNode.node->e==AST_NODE_STATEMENT_LIST)
+            {
+                depth--;
+            }
             printTree(node->statementListNode.node);
             if(node->statementListNode.next!=NULL)
             {
                 printTree(node->statementListNode.next);
             }
+
             depth--;
+
+            if(node->statementListNode.node->e==AST_NODE_STATEMENT_LIST)
+            {
+                depth++;
+            }
         break;
 
-        case AST_NODE_VAR_ASSIGNEMENT:
-            printf("varAssignementNode:\n");
+        case AST_NODE_ASSIGNEMENT:
+            printf("assignementNode:\n");
             depth++;
 
             printTreeExpr
             printf("leftExpr:\n");
 
-            printTree(node->varAssignementNode.leftExpr);
+            printTree(node->assignementNode.leftExpr);
 
             printTreeExpr
             printf("rightExpr:\n");
 
-            printTree(node->varAssignementNode.rightExpr);
+            printTree(node->assignementNode.rightExpr);
 
             depth--;
         break;
@@ -770,6 +835,29 @@ void printTree(AST_Node *node)
             depth++;
             printTree(node->returnNode.expr);
             depth--;
+        break;
+
+        case AST_NODE_VALUE_LIST:
+            printTreeExpr
+            printf("valueList:\n");
+
+            depth++;
+            if(node->statementListNode.node->e==AST_NODE_VALUE_LIST)
+            {
+                depth--;
+            }
+            printTree(node->statementListNode.node);
+            if(node->statementListNode.next!=NULL)
+            {
+                printTree(node->statementListNode.next);
+            }
+
+            depth--;
+
+            if(node->statementListNode.node->e==AST_NODE_VALUE_LIST)
+            {
+                depth++;
+            }
         break;
 
         case AST_NODE_DEF_FUNC:
