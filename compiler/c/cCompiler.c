@@ -591,6 +591,20 @@ struct AST_Node
 
 #define sizeOfNode(nodeName) (offsetof(AST_Node,statementListNode)+sizeof(((AST_Node){0}). nodeName))
 
+void printLexToken(FILE *file,LexToken *token)
+{
+    switch(token->e)
+    {
+        case LEX_TOKEN_PONCTUATION:
+            fprintf(file,"%c",token->ponctuation.c);
+        break;
+
+        default:
+            fprintf(file,"%.*s",token->strLen,token->str);
+        break;
+    }
+}
+
 
 AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
 {
@@ -599,6 +613,19 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
         return NULL;
     }
 
+    if(tokenCount==1)
+    {
+        if(tokens[0].e==LEX_TOKEN_CONSTANT)
+        {
+            AST_Node *result=arenaAlloc(arena,sizeOfNode(constantNode));
+
+            result->e=AST_NODE_CONSTANT;
+            result->constantNode.token=tokens;
+
+            return result;
+        }
+    }
+    
     size_t bracesCount=0;
     for(size_t i=0;i<tokenCount;++i)
     {
@@ -633,16 +660,23 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
                 bracesCount--;
             }
 
-            if((ponctuation=='}'||ponctuation==';')&&bracesCount==0)
+            if(((ponctuation==';')||(ponctuation=='}'))&&bracesCount==0)
             {
                 if(tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION)
                 {
-                    if((tokens[tokenCount-1].ponctuation.c!=';')||(tokens[tokenCount-1].ponctuation.c!='}'))
+                    if((tokens[tokenCount-1].ponctuation.c!=';')&&(tokens[tokenCount-1].ponctuation.c!='}'))
                     {
-                        fprintf(stderr,"Need a \';\' at token \"%*s\"",tokens[tokenCount-1].strLen,tokens[tokenCount-1].str);
+                        fprintf(stderr,"Need a \';\' at token \"");
+                        printLexToken(stderr,&(tokens[tokenCount-1]));
+                        fprintf(stderr,"\"\n");
                         exit(EXIT_FAILURE);
                         return NULL;
                     }
+                }
+
+                if(i==tokenCount-1)
+                {
+                    continue;
                 }
 
                 AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
@@ -658,7 +692,7 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
 
                 if(i!=tokenCount-1)
                 {
-                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-2,arena);
                 }
 
                 return result;
@@ -673,31 +707,111 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
         {
             if(i+2<tokenCount)
             {
-                if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+                if(tokens[++i].e==LEX_TOKEN_PONCTUATION)
                 {
                     if(tokens[i].ponctuation.c=='(')
                     {
                         // But Also '{' and '['
                         size_t parenthesesCount=0;
-
-
+                        
+                        AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
+                        result->e=AST_NODE_DEF_FUNC;
+                        
                         size_t startParentheses=i;
                         
                         if(tokens[i+1].e!=LEX_TOKEN_PONCTUATION)
                         {
-                            fprintf(stderr,"Can't handle functions with arguments");
+                            fprintf(stderr,"Can't handle functions with arguments\n");
+                            exit(EXIT_FAILURE);
+                            return NULL;
+                        }
+                        
+                        if(tokens[i+1].ponctuation.c!=')')
+                        {
+                            fprintf(stderr,"how...\n");
                             exit(EXIT_FAILURE);
                             return NULL;
                         }
 
-                        if(tokens[i+1].ponctuation.c!=')')
+                        result->defFuncNode.argList=NULL;
+                        result->defFuncNode.funcToken=tokens+i-1;
+                        
+                        i+=2;
+
+                        
+                        if(tokens[i].e!=LEX_TOKEN_PONCTUATION)
                         {
-                            fprintf(stderr,"how...");
+                            fprintf(stderr,"yes.\n");
+                            exit(EXIT_FAILURE);
+                            return NULL;
+                        }
+                        
+                        if(tokens[i++].ponctuation.c!=':')
+                        {
+                            fprintf(stderr,"need \':\' after a function\n");
+                            exit(EXIT_FAILURE);
+                            return NULL;
+                        }
+                        
+                        
+                        if(tokens[i].e!=LEX_TOKEN_ID)
+                        {
+                            fprintf(stderr,"need a type after a function\n");
+                            exit(EXIT_FAILURE);
                             return NULL;
                         }
 
-                        ++i;
+                        result->defFuncNode.typeToken=tokens+i;
 
+                        size_t endBraces=++i;
+                        
+                        bracesCount=0;
+
+                        while(endBraces<tokenCount)
+                        {
+                            if(tokens[endBraces].e==LEX_TOKEN_PONCTUATION)
+                            {
+                                if(
+                                    tokens[endBraces].ponctuation.c=='('||
+                                    tokens[endBraces].ponctuation.c=='['||
+                                    tokens[endBraces].ponctuation.c=='{'
+                                )
+                                {
+                                    bracesCount++;
+                                }
+
+                                if(
+                                    tokens[endBraces].ponctuation.c==')'||
+                                    tokens[endBraces].ponctuation.c==']'||
+                                    tokens[endBraces].ponctuation.c=='}'
+                                )
+                                {
+                                    bracesCount--;
+                                }
+
+
+                                if(tokens[endBraces].ponctuation.c=='}'&&bracesCount==0)
+                                {
+                                    break;
+                                }
+                            }
+
+                            ++endBraces;
+                        }
+
+                        if(tokens[endBraces].e!=LEX_TOKEN_PONCTUATION)
+                        {
+                            if(tokens[endBraces].ponctuation.c!='}')
+                            {
+                                fprintf(stderr,"not closing brace after a function\n");
+                                exit(EXIT_FAILURE);
+                                return NULL;
+                            }
+                        }
+
+                        result->defFuncNode.code=parseFunc(tokens+i+1,endBraces-i-1,arena);
+
+                        return result;
                     }
 
                 }
@@ -711,10 +825,11 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
             AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
 
             result->e=AST_NODE_RETURN;
-            result->returnNode.expr=parseFunc(tokens+1,tokenCount-1,arena);
+            result->returnNode.expr=parseFunc(tokens+1,tokenCount-2,arena);
 
             return result;
         }
+
     }
 }
 
@@ -730,14 +845,19 @@ bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **sta
 
 #define printTreeExpr for(size_t depthIdx=0;depthIdx<depth;++depthIdx){printf("    ");}
 
-void printLexToken(LexToken *token)
-{
-    printf("%.*s",token->strLen,token->str);
-}
-
 void printTree(AST_Node *node)
 {
     static int depth=0;
+
+    if(depth>100)
+    {
+        fprintf(stderr,"something's fishy");
+    }
+    if(!node)
+    {
+        printTreeExpr
+        printf("returned NULL:(\n");
+    }
     switch(node->e)
     {
         case AST_NODE_STATEMENT_LIST:
@@ -811,12 +931,12 @@ void printTree(AST_Node *node)
             depth++;
             printTreeExpr
             printf("nameToken=");
-            printLexToken(node->decVarNode.nameToken);
+            printLexToken(stdout,node->decVarNode.nameToken);
             printf("\n");
 
             printTreeExpr
             printf("typeToken=");
-            printLexToken(node->decVarNode.typeToken);
+            printLexToken(stdout,node->decVarNode.typeToken);
             printf("\n");
 
             depth--;
@@ -862,12 +982,21 @@ void printTree(AST_Node *node)
             depth++;
 
             printTreeExpr
-            printf("func:\n");
-            printTree(node->defFuncNode.funcToken);
+            printf("func:\"");
+            printLexToken(stdout,node->defFuncNode.funcToken);
+            printf("\"\n");
 
             printTreeExpr
-            printf("code:\n");
-            printTree(node->defFuncNode.code);
+            printf("type:\"");
+            printLexToken(stdout,node->defFuncNode.typeToken);
+            printf("\"\n");
+
+            if(node->defFuncNode.code)
+            {
+                printTreeExpr
+                printf("code:\n");
+                printTree(node->defFuncNode.code);
+            }
 
             depth--;
         break;
@@ -885,6 +1014,21 @@ void printTree(AST_Node *node)
             printTreeExpr
             printf("args:\n");
             printTree(node->callingFuncNode.args);
+
+            depth--;
+        break;
+
+        case AST_NODE_CONSTANT:
+            printTreeExpr
+            printf("constant:\n");
+
+            depth++;
+
+            printTreeExpr
+            printf("token:\"");
+
+            printLexToken(stdout,node->constantNode.token);
+            printf("\"\n");
 
             depth--;
         break;
@@ -936,6 +1080,14 @@ void compile(char *str,size_t strSize,FILE *outFile)
         printf("\n\t},");
     }
     printf("\b \n}\n");
+
+    arenaType(void) parseTreeArena;
+    arenaCreate(parseTreeArena,1ull<<15);
+
+    AST_Node *treeRoot=NULL;
+    parse(tokens,parseTreeArena,&treeRoot);
+
+    printTree(treeRoot);
 
 
     #endif

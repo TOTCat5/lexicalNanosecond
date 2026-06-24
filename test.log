@@ -1,0 +1,42 @@
+preprocessedCode="main():int32 { return 0; }"=preprocessedCode
+tokens={
+	{
+		.e=LEX_TOKEN_ID,
+		.str="main"
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char='('
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char=')'
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char=':'
+	},
+	{
+		.e=LEX_TOKEN_ID,
+		.str="int32"
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char='{'
+	},
+	{
+		.e=LEX_TOKEN_RETURN
+	},
+	{
+		.e=LEX_TOKEN_CONSTANT,
+		.str="0"
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char=';'
+	},
+	{
+		.e=LEX_TOKEN_PONCTUATION,
+		char='}'
+	}
+}

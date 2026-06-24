@@ -19,8 +19,9 @@ typedef struct ArenaHeader
 
 #define arenaCreate(arena,byteCount) do{\
     ArenaHeader *h_e_a_d_e_r=calloc(sizeof(*h_e_a_d_e_r)+(byteCount),1);\
-    h_e_a_d_e_r->capacity=capacity;\
+    h_e_a_d_e_r->capacity=(byteCount);\
     arena=(void *)(h_e_a_d_e_r+1);\
+    h_e_a_d_e_r->offset=arena;\
 } while(0)
 
 static void *arenaAllocFunc(void *arena,size_t size)
