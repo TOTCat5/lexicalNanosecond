@@ -3,8 +3,3 @@ main():int32
     \\ still uses return
     return  0;
 }
-
-testOtherFunc():int32
-{
-    return 10;
-}

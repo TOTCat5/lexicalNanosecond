@@ -1041,6 +1041,54 @@ void printTree(AST_Node *node)
     }
 }
 
+
+bool isCodeValid(AST_Node *head)
+{
+    // TODO: implement it
+    return true;
+}
+
+
+void generateAssembly(FILE *outFile,AST_Node *head)
+{
+    switch(head->e)
+    {
+        case AST_NODE_STATEMENT_LIST:
+            generateAssembly(outFile,head->statementListNode.node);
+
+            generateAssembly(outFile,head->statementListNode.next);
+
+        break;
+
+        case AST_NODE_DEF_FUNC:
+
+            fprintf(outFile,"\"");
+            printLexToken(outFile,head->defFuncNode.funcToken);
+            fprintf(outFile,"\":\n");
+
+            generateAssembly(outFile,head->defFuncNode.code);
+
+        break;
+
+        case AST_NODE_RETURN:
+            if(head->returnNode.expr->e!=AST_NODE_CONSTANT)
+            {
+                fprintf(stderr,"isn't a constant");
+                exit(EXIT_FAILURE);
+            }
+
+            fprintf(outFile,"mov eax,");
+            printLexToken(outFile,head->returnNode.expr->constantNode.token);
+            fprintf(outFile,"\n");
+            
+
+            fprintf(outFile,"ret\n");
+        break;
+
+    }
+}
+
+
 void compile(char *str,size_t strSize,FILE *outFile)
 {
     listType(LexToken) tokens=NULL;
@@ -1089,9 +1137,19 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     printTree(treeRoot);
 
+    if(!isCodeValid(treeRoot))
+    {
+        exit(EXIT_FAILURE);
+    }
+
+    fputs("section .text\nglobal main",outFile);
+
+    generateAssembly(outFile,treeRoot);
+
 
     #endif
 }
+
 
 
 
