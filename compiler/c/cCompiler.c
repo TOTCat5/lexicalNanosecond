@@ -1062,9 +1062,8 @@ void generateAssembly(FILE *outFile,AST_Node *head)
 
         case AST_NODE_DEF_FUNC:
 
-            fprintf(outFile,"\"");
             printLexToken(outFile,head->defFuncNode.funcToken);
-            fprintf(outFile,"\":\n");
+            fprintf(outFile,":\n");
 
             generateAssembly(outFile,head->defFuncNode.code);
 
@@ -1142,7 +1141,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
         exit(EXIT_FAILURE);
     }
 
-    fputs("section .text\nglobal main",outFile);
+    fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
     generateAssembly(outFile,treeRoot);
 
