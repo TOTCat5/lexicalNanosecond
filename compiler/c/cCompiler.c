@@ -662,16 +662,16 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
 
             if(((ponctuation==';')||(ponctuation=='}'))&&bracesCount==0)
             {
-                if(tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION)
+                if(
+                    tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION&&
+                    (tokens[tokenCount-1].ponctuation.c!=';')&&(tokens[tokenCount-1].ponctuation.c!='}')
+                )
                 {
-                    if((tokens[tokenCount-1].ponctuation.c!=';')&&(tokens[tokenCount-1].ponctuation.c!='}'))
-                    {
-                        fprintf(stderr,"Need a \';\' at token \"");
-                        printLexToken(stderr,&(tokens[tokenCount-1]));
-                        fprintf(stderr,"\"\n");
-                        exit(EXIT_FAILURE);
-                        return NULL;
-                    }
+                    fprintf(stderr,"Need a \';\' at token \"");
+                    printLexToken(stderr,&(tokens[tokenCount-1]));
+                    fprintf(stderr,"\"\n");
+                    exit(EXIT_FAILURE);
+                    return NULL;
                 }
 
                 if(i==tokenCount-1)
@@ -719,16 +719,9 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
                         
                         size_t startParentheses=i;
                         
-                        if(tokens[i+1].e!=LEX_TOKEN_PONCTUATION)
+                        if((tokens[i+1].e!=LEX_TOKEN_PONCTUATION)||(tokens[i+1].ponctuation.c!=')'))
                         {
                             fprintf(stderr,"Can't handle functions with arguments\n");
-                            exit(EXIT_FAILURE);
-                            return NULL;
-                        }
-                        
-                        if(tokens[i+1].ponctuation.c!=')')
-                        {
-                            fprintf(stderr,"how...\n");
                             exit(EXIT_FAILURE);
                             return NULL;
                         }
@@ -739,14 +732,7 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
                         i+=2;
 
                         
-                        if(tokens[i].e!=LEX_TOKEN_PONCTUATION)
-                        {
-                            fprintf(stderr,"yes.\n");
-                            exit(EXIT_FAILURE);
-                            return NULL;
-                        }
-                        
-                        if(tokens[i++].ponctuation.c!=':')
+                        if((tokens[i].e!=LEX_TOKEN_PONCTUATION)||(tokens[i].ponctuation.c!=':'))
                         {
                             fprintf(stderr,"need \':\' after a function\n");
                             exit(EXIT_FAILURE);
@@ -754,7 +740,7 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
                         }
                         
                         
-                        if(tokens[i].e!=LEX_TOKEN_ID)
+                        if(tokens[++i].e!=LEX_TOKEN_ID)
                         {
                             fprintf(stderr,"need a type after a function\n");
                             exit(EXIT_FAILURE);
