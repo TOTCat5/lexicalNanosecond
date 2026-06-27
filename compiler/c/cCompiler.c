@@ -553,7 +553,7 @@ struct AST_Node
 
         struct
         {
-            AST_Node *constant;
+            AST_Node *value;
             AST_Node *next;
         } valueListNode;
         
@@ -561,8 +561,8 @@ struct AST_Node
         // can be dec if code is NULL
         struct
         {
-            LexToken *funcToken;
-            LexToken *typeToken;
+            const LexToken *funcToken;
+            const LexToken *typeToken;
             AST_Node *argList;
 
             AST_Node *code;
@@ -577,12 +577,12 @@ struct AST_Node
 
         struct
         {
-            LexToken *token;
+            const LexToken *token;
         } constantNode;
 
         struct
         {
-            LexToken *token;
+            const LexToken *token;
         } varNode;
 
     };
@@ -591,7 +591,7 @@ struct AST_Node
 
 #define sizeOfNode(nodeName) (offsetof(AST_Node,statementListNode)+sizeof(((AST_Node){0}). nodeName))
 
-void printLexToken(FILE *file,LexToken *token)
+void printLexToken(FILE *file,const LexToken *token)
 {
     switch(token->e)
     {
@@ -606,7 +606,7 @@ void printLexToken(FILE *file,LexToken *token)
 }
 
 
-AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
+AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
 {
     if(tokenCount==0)
     {
@@ -624,7 +624,16 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
 
             return result;
         }
+        if(tokens[0].e==LEX_TOKEN_ID)
+        {
+            AST_Node *result=arenaAlloc(arena,sizeOfNode(varNode));
+            result->e=AST_NODE_VAR;
+            result->constantNode.token=tokens;
+
+            return result;
+        }
     }
+
     
     size_t bracesCount=0;
     for(size_t i=0;i<tokenCount;++i)
@@ -701,122 +710,184 @@ AST_Node *parseFunc(LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena
         }
     }
 
-    for(size_t i=0;i<tokenCount;++i)
+    if(tokens[0].e==LEX_TOKEN_RETURN)
     {
-        if(tokens[i].e==LEX_TOKEN_ID)
+        AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
+        result->e=AST_NODE_RETURN;
+
+        result->returnNode.expr=parseFunc(tokens+1,tokenCount-2,arena);
+
+        return result;
+    }
+
+    if(tokens[0].e==LEX_TOKEN_ID||tokens[0].e==LEX_TOKEN_CONSTANT)
+    {
+        // unecessary 'if(tokenCount<1)' when already checked with 'tokenCount==1' and 'tokenCount==0'
+
+        if(tokens[1].e==LEX_TOKEN_PONCTUATION)
         {
-            if(i+2<tokenCount)
+            switch(tokens[1].ponctuation.c)
             {
-                if(tokens[++i].e==LEX_TOKEN_PONCTUATION)
+                // functions
+                case '(':
                 {
-                    if(tokens[i].ponctuation.c=='(')
+                    if(tokens[0].e==LEX_TOKEN_ID)
                     {
-                        // But Also '{' and '['
-                        size_t parenthesesCount=0;
-                        
                         AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
                         result->e=AST_NODE_DEF_FUNC;
-                        
-                        size_t startParentheses=i;
-                        
-                        if((tokens[i+1].e!=LEX_TOKEN_PONCTUATION)||(tokens[i+1].ponctuation.c!=')'))
+
+                        result->defFuncNode.funcToken=tokens;
+
+                        size_t endArgListIdx=0;
                         {
-                            fprintf(stderr,"Can't handle functions with arguments\n");
-                            exit(EXIT_FAILURE);
-                            return NULL;
-                        }
-
-                        result->defFuncNode.argList=NULL;
-                        result->defFuncNode.funcToken=tokens+i-1;
-                        
-                        i+=2;
-
-                        
-                        if((tokens[i].e!=LEX_TOKEN_PONCTUATION)||(tokens[i].ponctuation.c!=':'))
-                        {
-                            fprintf(stderr,"need \':\' after a function\n");
-                            exit(EXIT_FAILURE);
-                            return NULL;
-                        }
-                        
-                        
-                        if(tokens[++i].e!=LEX_TOKEN_ID)
-                        {
-                            fprintf(stderr,"need a type after a function\n");
-                            exit(EXIT_FAILURE);
-                            return NULL;
-                        }
-
-                        result->defFuncNode.typeToken=tokens+i;
-
-                        size_t endBraces=++i;
-                        
-                        bracesCount=0;
-
-                        while(endBraces<tokenCount)
-                        {
-                            if(tokens[endBraces].e==LEX_TOKEN_PONCTUATION)
+                            // like '{}' or '[]' and '()'
+                            // As A start enclosure with the func start
+                            size_t enclosureCount=1;
+                            for(size_t i=2;i<tokenCount;++i)
                             {
-                                if(
-                                    tokens[endBraces].ponctuation.c=='('||
-                                    tokens[endBraces].ponctuation.c=='['||
-                                    tokens[endBraces].ponctuation.c=='{'
-                                )
+                                if(tokens[i].e==LEX_TOKEN_PONCTUATION)
                                 {
-                                    bracesCount++;
+                                    char tokenPonc=tokens[i].ponctuation.c;
+                                    if(
+                                        tokenPonc=='('||
+                                        tokenPonc=='['||
+                                        tokenPonc=='{'
+                                    )
+                                    {
+                                        enclosureCount++;
+                                    }
+
+                                    if(
+                                        tokenPonc==')'||
+                                        tokenPonc==']'||
+                                        tokenPonc=='}'
+                                    )
+                                    {
+                                        enclosureCount++;
+                                    }
+
+                                    if(tokenPonc==')'&&enclosureCount==0)
+                                    {
+                                        endArgListIdx=i;
+                                        break;
+                                    }
                                 }
-
-                                if(
-                                    tokens[endBraces].ponctuation.c==')'||
-                                    tokens[endBraces].ponctuation.c==']'||
-                                    tokens[endBraces].ponctuation.c=='}'
-                                )
-                                {
-                                    bracesCount--;
-                                }
-
-
-                                if(tokens[endBraces].ponctuation.c=='}'&&bracesCount==0)
-                                {
-                                    break;
-                                }
-                            }
-
-                            ++endBraces;
-                        }
-
-                        if(tokens[endBraces].e!=LEX_TOKEN_PONCTUATION)
-                        {
-                            if(tokens[endBraces].ponctuation.c!='}')
-                            {
-                                fprintf(stderr,"not closing brace after a function\n");
-                                exit(EXIT_FAILURE);
-                                return NULL;
                             }
                         }
 
-                        result->defFuncNode.code=parseFunc(tokens+i+1,endBraces-i-1,arena);
+                        if(endArgListIdx<2)
+                        {
+                            // error impossible
+                        }
 
-                        return result;
+                        result->defFuncNode.argList=parseFunc(tokens+2,endArgListIdx-2,arena);
+
+                        if(endArgListIdx+2>tokenCount)
+                        {
+                            // means it don't have type
+                        }
+
+
+                        if(
+                            // lack ';'
+                            tokens[endArgListIdx+1].e!=LEX_TOKEN_PONCTUATION||
+                            tokens[endArgListIdx+1].ponctuation.c!=':'||
+
+                            // lack type id
+                            tokens[endArgListIdx+2].e!=LEX_TOKEN_ID
+                        )
+                        {
+                            // error need type
+                        }
+
+                        // TODO: code break when modifier. don't care for now,can't even handle them
+                        result->defFuncNode.typeToken=tokens+endArgListIdx+2;
+
+
+                        if(
+                            // 2 for the offset and 1 to convert wit array size
+                            endArgListIdx+2+1==tokenCount
+                        )
+                        {
+                            // just declaration
+                            result->defFuncNode.code=NULL;
+                            return result;
+                        }
+
+                        // has def
+                        size_t startCodeIdx=0;
+                        {
+                            // see up on the code,for the func parentheses. same use
+                            size_t enclosureCount=0;
+
+                            for(size_t i=endArgListIdx+3;i<tokenCount;++i)
+                            {
+                                if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+                                {
+                                    char tokenPonc=tokens[i].ponctuation.c;
+                                    if(
+                                        tokenPonc=='('||
+                                        tokenPonc=='['||
+                                        tokenPonc=='{'
+                                    )
+                                    {
+                                        enclosureCount++;
+                                    }
+
+                                    if(
+                                        tokenPonc==')'||
+                                        tokenPonc==']'||
+                                        tokenPonc=='}'
+                                    )
+                                    {
+                                        enclosureCount++;
+                                    }
+
+                                    if(tokenPonc=='}'&&enclosureCount==0)
+                                    {
+                                        startCodeIdx=i;
+                                        break;
+                                    }
+                                }
+                            }
+
+
+
+                        }
+                    }
+                }
+                break;
+
+                // dec of a var
+                case ':':
+                {
+                    if(tokenCount!=3)
+                    {
+                        // can't handle modifier right now
                     }
 
+                    if(tokens[2].e!=LEX_TOKEN_ID)
+                    {
+                        // that's weird if that ever happens
+                    }
+
+                    AST_Node *result=arenaAlloc(arena,sizeOfNode(decVarNode));
+                    result->e=AST_NODE_DEC_VAR;
+
+                    result->decVarNode.nameToken=tokens;
+                    result->decVarNode.typeToken=tokens+2;
+
+                    return result;
+
                 }
-                
+                break;
+
             }
         }
-
-
-        if(tokens[i].e==LEX_TOKEN_RETURN)
-        {
-            AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
-
-            result->e=AST_NODE_RETURN;
-            result->returnNode.expr=parseFunc(tokens+1,tokenCount-2,arena);
-
-            return result;
-        }
-
     }
+
+    
+
 }
 
 

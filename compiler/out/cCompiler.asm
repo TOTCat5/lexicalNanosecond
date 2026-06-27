@@ -4,5 +4,5 @@ WinMain:
 call main
 ret
 main:
-mov eax,901
+mov eax,0
 ret
