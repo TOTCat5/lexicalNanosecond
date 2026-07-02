@@ -542,8 +542,8 @@ struct AST_Node
 
         struct
         {
-            LexToken *nameToken;
-            LexToken *typeToken;
+            const LexToken *nameToken;
+            const LexToken *typeToken;
         } decVarNode;
 
         struct
@@ -701,7 +701,69 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
                 if(i!=tokenCount-1)
                 {
-                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-2,arena);
+                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+                }
+
+                return result;
+            }
+
+        }
+    }
+
+    for(size_t i=0;i<tokenCount;++i)
+    {
+        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        {
+            char ponctuation=tokens[i].ponctuation.c;
+
+            if(ponctuation=='{')
+            {
+                bracesCount++;
+            }
+            if(ponctuation=='}')
+            {
+                bracesCount--;
+            }
+
+            if(ponctuation=='(')
+            {
+                bracesCount++;
+            }
+            if(ponctuation==')')
+            {
+                bracesCount--;
+            }
+
+            if(ponctuation=='[')
+            {
+                bracesCount++;
+            }
+            if(ponctuation==']')
+            {
+                bracesCount--;
+            }
+
+            if((ponctuation==',')&&bracesCount==0)
+            {
+                if(i==tokenCount-1)
+                {
+                    continue;
+                }
+
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
+
+                result->e=AST_NODE_VALUE_LIST;
+                result->statementListNode.node=parseFunc(tokens,i,arena);
+                if(result->statementListNode.node==NULL)
+                {
+                    return NULL;
+                }
+
+                result->statementListNode.next=NULL;
+
+                if(i!=tokenCount-1)
+                {
+                    result->statementListNode.next=parseFunc(tokens+i+1,tokenCount-i-1,arena);
                 }
 
                 return result;
@@ -715,7 +777,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
         AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
         result->e=AST_NODE_RETURN;
 
-        result->returnNode.expr=parseFunc(tokens+1,tokenCount-2,arena);
+        result->returnNode.expr=parseFunc(tokens+1,tokenCount-1,arena);
 
         return result;
     }
@@ -733,11 +795,6 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                 {
                     if(tokens[0].e==LEX_TOKEN_ID)
                     {
-                        AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
-                        result->e=AST_NODE_DEF_FUNC;
-
-                        result->defFuncNode.funcToken=tokens;
-
                         size_t endArgListIdx=0;
                         {
                             // like '{}' or '[]' and '()'
@@ -763,7 +820,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                                         tokenPonc=='}'
                                     )
                                     {
-                                        enclosureCount++;
+                                        enclosureCount--;
                                     }
 
                                     if(tokenPonc==')'&&enclosureCount==0)
@@ -777,35 +834,42 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
                         if(endArgListIdx<2)
                         {
-                            // error impossible
-                        }
+                            fprintf(stderr,"endArgListIdx<2 at token \"");
+                            printLexToken(stderr,tokens);
+                            fprintf(stderr,"\"\n");
 
-                        result->defFuncNode.argList=parseFunc(tokens+2,endArgListIdx-2,arena);
-
-                        if(endArgListIdx+2>tokenCount)
-                        {
-                            // means it don't have type
+                            exit(EXIT_FAILURE);
                         }
 
 
                         if(
-                            // lack ';'
-                            tokens[endArgListIdx+1].e!=LEX_TOKEN_PONCTUATION||
-                            tokens[endArgListIdx+1].ponctuation.c!=':'||
-
-                            // lack type id
-                            tokens[endArgListIdx+2].e!=LEX_TOKEN_ID
+                            endArgListIdx+1==tokenCount
                         )
                         {
-                            // error need type
+                            AST_Node *result=arenaAlloc(arena,sizeOfNode(callingFuncNode));
+                            result->e=AST_NODE_CALLING_FUNC;
+
+                            result->callingFuncNode.func=parseFunc(tokens,1,arena);
+                            result->callingFuncNode.args=parseFunc(tokens+2,endArgListIdx-2,arena);
+                            
+                            return result;
                         }
 
-                        // TODO: code break when modifier. don't care for now,can't even handle them
+
+                        AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
+                        result->e=AST_NODE_DEF_FUNC;
+
+                        result->defFuncNode.funcToken=tokens;
+                        
+                        result->defFuncNode.argList=parseFunc(tokens+2,endArgListIdx-2,arena);
+
                         result->defFuncNode.typeToken=tokens+endArgListIdx+2;
 
 
+
+
                         if(
-                            // 2 for the offset and 1 to convert wit array size
+                            // 2 for the offset and 1 to convert with array size
                             endArgListIdx+2+1==tokenCount
                         )
                         {
@@ -815,45 +879,18 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                         }
 
                         // has def
-                        size_t startCodeIdx=0;
-                        {
-                            // see up on the code,for the func parentheses. same use
-                            size_t enclosureCount=0;
+                        
+                        size_t startCodeIdx=endArgListIdx+4;
 
-                            for(size_t i=endArgListIdx+3;i<tokenCount;++i)
-                            {
-                                if(tokens[i].e==LEX_TOKEN_PONCTUATION)
-                                {
-                                    char tokenPonc=tokens[i].ponctuation.c;
-                                    if(
-                                        tokenPonc=='('||
-                                        tokenPonc=='['||
-                                        tokenPonc=='{'
-                                    )
-                                    {
-                                        enclosureCount++;
-                                    }
+                        fprintf(stderr,"tokens+startCodeIdx=\"");
+                        printLexToken(stderr,tokens+startCodeIdx);
+                        fprintf(stderr,"\"\n");
+                        
+                        fprintf(stderr,"tokenCount=%zu\n",tokenCount-startCodeIdx-2);
 
-                                    if(
-                                        tokenPonc==')'||
-                                        tokenPonc==']'||
-                                        tokenPonc=='}'
-                                    )
-                                    {
-                                        enclosureCount++;
-                                    }
+                        result->defFuncNode.code=parseFunc(tokens+startCodeIdx,tokenCount-startCodeIdx-2,arena);
 
-                                    if(tokenPonc=='}'&&enclosureCount==0)
-                                    {
-                                        startCodeIdx=i;
-                                        break;
-                                    }
-                                }
-                            }
-
-
-
-                        }
+                        return result;
                     }
                 }
                 break;
@@ -913,7 +950,8 @@ void printTree(AST_Node *node)
     if(!node)
     {
         printTreeExpr
-        printf("returned NULL:(\n");
+        printf("returned NULL :(\n");
+        return;
     }
     switch(node->e)
     {
@@ -1043,17 +1081,22 @@ void printTree(AST_Node *node)
             printLexToken(stdout,node->defFuncNode.funcToken);
             printf("\"\n");
 
+
+            printTreeExpr
+            printf("argList:\n");
+            depth++;
+                printTree(node->defFuncNode.argList);
+            depth--;
+
             printTreeExpr
             printf("type:\"");
             printLexToken(stdout,node->defFuncNode.typeToken);
             printf("\"\n");
 
-            if(node->defFuncNode.code)
-            {
-                printTreeExpr
-                printf("code:\n");
-                printTree(node->defFuncNode.code);
-            }
+            
+            printTreeExpr
+            printf("code:\n");
+            printTree(node->defFuncNode.code);
 
             depth--;
         break;
@@ -1085,6 +1128,21 @@ void printTree(AST_Node *node)
             printf("token:\"");
 
             printLexToken(stdout,node->constantNode.token);
+            printf("\"\n");
+
+            depth--;
+        break;
+
+        case AST_NODE_VAR:
+            printTreeExpr
+            printf("varNode:\n");
+            
+            depth++;
+
+            printTreeExpr
+            printf("token:\"");
+
+            printLexToken(stdout,node->varNode.token);
             printf("\"\n");
 
             depth--;
@@ -1198,9 +1256,9 @@ void compile(char *str,size_t strSize,FILE *outFile)
         exit(EXIT_FAILURE);
     }
 
-    fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
+    // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
-    generateAssembly(outFile,treeRoot);
+    // generateAssembly(outFile,treeRoot);
 
 
     #endif
@@ -1215,7 +1273,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
 
-    FILE *inFile=fopen("tests/exitImmediatly.ln","rb");
+    FILE *inFile=fopen("tests/argumentsTest.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);
