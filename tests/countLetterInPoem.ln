@@ -2,7 +2,7 @@ import io;
 
 
 
-main(argc:const(int32),argv:const(stackList(str))):int32
+main(argc:const(int32),argv:const(ptr(const(str)))):int32
 {
     if(argc!=3)
     {

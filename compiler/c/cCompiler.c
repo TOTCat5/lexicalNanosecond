@@ -182,7 +182,7 @@ typedef struct LexToken
 
     union
     {
-        uint16_t ponctuation;
+        uint8_t ponctuation; 
 
         struct
         {
@@ -212,8 +212,7 @@ uint16_t ponctuationTokens[]={
     '&',
     '^',
     '|',
-    '!',
-    '='<<8|'='
+    '!'
 };
 
 
@@ -438,17 +437,6 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
             listRemoveAtIndex(tokenList,i);
             i-=1;
         }
-
-        if(
-            (tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i].ponctuation=='=')&&
-            (i!=listLength(tokenList)))
-        {
-            if(tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i+1].ponctuation=='=')
-            {
-                tokenList[i].ponctuation='='<<8|'=';
-                listRemoveAtIndex(tokenList,i+1);
-            }
-        }
     }
 
 
@@ -621,12 +609,12 @@ size_t enclosureCheck(uint16_t ponctuation)
         case '{':
         case '[':
         case '(':
-            return 1ull;
+            return 1;
         
         case '}':
         case ']':
         case ')':
-            return -1ull;
+            return SIZE_MAX;
     }
 
     return 0;
@@ -899,7 +887,9 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
                         // has def
                         
-                        size_t startCodeIdx=endArgListIdx+4;
+                        size_t startCodeIdx=0;
+                    
+                        startCodeIdx=endArgListIdx+4;
 
                         fprintf(stderr,"tokens+startCodeIdx=\"");
                         printLexToken(stderr,tokens+startCodeIdx);
@@ -1184,6 +1174,12 @@ void printTree(AST_Node *node)
         break;
 
     }
+}
+
+
+void cleanUpTree()
+{
+    
 }
 
 
