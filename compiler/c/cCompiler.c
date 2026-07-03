@@ -182,10 +182,7 @@ typedef struct LexToken
 
     union
     {
-        struct
-        {
-            char c;
-        } ponctuation;
+        uint16_t ponctuation;
 
         struct
         {
@@ -195,7 +192,7 @@ typedef struct LexToken
     };
 } LexToken;
 
-char ponctuationTokens[]={
+uint16_t ponctuationTokens[]={
     ' ',
     ',',
     '.',
@@ -215,7 +212,8 @@ char ponctuationTokens[]={
     '&',
     '^',
     '|',
-    '!'
+    '!',
+    '='<<8|'='
 };
 
 
@@ -357,7 +355,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
             startStrI=i;
             LexToken token={
                 .e=LEX_TOKEN_PONCTUATION,
-                .ponctuation.c=ponctuationTokens[foundIdx]
+                .ponctuation=ponctuationTokens[foundIdx]
             };
             listPushBack(tokenList,token);
             continue;
@@ -411,7 +409,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                 if(i<listLength(tokenList)-2)
                 {
                     bool isFloatNumber=tokenList[i+1].e==LEX_TOKEN_PONCTUATION&&
-                                        tokenList[i+1].ponctuation.c=='.'&&
+                                        tokenList[i+1].ponctuation=='.'&&
                                         isTokenDecimalInteger(tokenList+i+2);
                     if(isFloatNumber)
                     {
@@ -435,10 +433,21 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
         }
 
-        if(tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i].ponctuation.c==' ')
+        if(tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i].ponctuation==' ')
         {
             listRemoveAtIndex(tokenList,i);
             i-=1;
+        }
+
+        if(
+            (tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i].ponctuation=='=')&&
+            (i!=listLength(tokenList)))
+        {
+            if(tokenList[i].e==LEX_TOKEN_PONCTUATION&&tokenList[i+1].ponctuation=='=')
+            {
+                tokenList[i].ponctuation='='<<8|'=';
+                listRemoveAtIndex(tokenList,i+1);
+            }
         }
     }
 
@@ -596,13 +605,31 @@ void printLexToken(FILE *file,const LexToken *token)
     switch(token->e)
     {
         case LEX_TOKEN_PONCTUATION:
-            fprintf(file,"%c",token->ponctuation.c);
+            fprintf(file,"%c",token->ponctuation);
         break;
 
         default:
             fprintf(file,"%.*s",token->strLen,token->str);
         break;
     }
+}
+
+size_t enclosureCheck(uint16_t ponctuation)
+{
+    switch(ponctuation)
+    {
+        case '{':
+        case '[':
+        case '(':
+            return 1ull;
+        
+        case '}':
+        case ']':
+        case ')':
+            return -1ull;
+    }
+
+    return 0;
 }
 
 
@@ -640,40 +667,16 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
     {
         if(tokens[i].e==LEX_TOKEN_PONCTUATION)
         {
-            char ponctuation=tokens[i].ponctuation.c;
+            char ponctuation=tokens[i].ponctuation;
 
-            if(ponctuation=='{')
-            {
-                bracesCount++;
-            }
-            if(ponctuation=='}')
-            {
-                bracesCount--;
-            }
+            bracesCount+=enclosureCheck(ponctuation);
 
-            if(ponctuation=='(')
-            {
-                bracesCount++;
-            }
-            if(ponctuation==')')
-            {
-                bracesCount--;
-            }
-
-            if(ponctuation=='[')
-            {
-                bracesCount++;
-            }
-            if(ponctuation==']')
-            {
-                bracesCount--;
-            }
 
             if(((ponctuation==';')||(ponctuation=='}'))&&bracesCount==0)
             {
                 if(
                     tokens[tokenCount-1].e==LEX_TOKEN_PONCTUATION&&
-                    (tokens[tokenCount-1].ponctuation.c!=';')&&(tokens[tokenCount-1].ponctuation.c!='}')
+                    (tokens[tokenCount-1].ponctuation!=';')&&(tokens[tokenCount-1].ponctuation!='}')
                 )
                 {
                     fprintf(stderr,"Need a \';\' at token \"");
@@ -714,34 +717,9 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
     {
         if(tokens[i].e==LEX_TOKEN_PONCTUATION)
         {
-            char ponctuation=tokens[i].ponctuation.c;
+            char ponctuation=tokens[i].ponctuation;
 
-            if(ponctuation=='{')
-            {
-                bracesCount++;
-            }
-            if(ponctuation=='}')
-            {
-                bracesCount--;
-            }
-
-            if(ponctuation=='(')
-            {
-                bracesCount++;
-            }
-            if(ponctuation==')')
-            {
-                bracesCount--;
-            }
-
-            if(ponctuation=='[')
-            {
-                bracesCount++;
-            }
-            if(ponctuation==']')
-            {
-                bracesCount--;
-            }
+            bracesCount+=enclosureCheck(ponctuation);
 
             if((ponctuation==',')&&bracesCount==0)
             {
@@ -772,6 +750,46 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
         }
     }
 
+    for(size_t i=0;i<tokenCount;++i)
+    {
+        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        {
+            char ponctuation=tokens[i].ponctuation;
+
+            bracesCount+=enclosureCheck(ponctuation);
+
+            if((ponctuation=='=')&&bracesCount==0)
+            {
+                if(i==tokenCount-1)
+                {
+                    continue;
+                }
+
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
+
+                result->e=AST_NODE_ASSIGNEMENT;
+                result->assignementNode.leftExpr=parseFunc(tokens,i,arena);
+                if(result->assignementNode.leftExpr==NULL)
+                {
+                    return NULL;
+                }
+
+                result->assignementNode.rightExpr=NULL;
+
+                if(i!=tokenCount-1)
+                {
+                    result->assignementNode.rightExpr=parseFunc(tokens+i+1,tokenCount-i-1,arena);
+                }
+
+                return result;
+            }
+
+        }
+    }
+
+    
+
+
     if(tokens[0].e==LEX_TOKEN_RETURN)
     {
         AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
@@ -788,7 +806,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
         if(tokens[1].e==LEX_TOKEN_PONCTUATION)
         {
-            switch(tokens[1].ponctuation.c)
+            switch(tokens[1].ponctuation)
             {
                 // functions
                 case '(':
@@ -804,7 +822,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                             {
                                 if(tokens[i].e==LEX_TOKEN_PONCTUATION)
                                 {
-                                    char tokenPonc=tokens[i].ponctuation.c;
+                                    char tokenPonc=tokens[i].ponctuation;
                                     if(
                                         tokenPonc=='('||
                                         tokenPonc=='['||
@@ -831,6 +849,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                                 }
                             }
                         }
+
 
                         if(endArgListIdx<2)
                         {
@@ -937,7 +956,7 @@ bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **sta
 }
 
 
-#define printTreeExpr for(size_t depthIdx=0;depthIdx<depth;++depthIdx){printf("    ");}
+#define printTreeExpr for(size_t depthIdx=0;depthIdx<depth;++depthIdx){printf("     ");}
 
 void printTree(AST_Node *node)
 {
@@ -979,18 +998,23 @@ void printTree(AST_Node *node)
         break;
 
         case AST_NODE_ASSIGNEMENT:
+            printTreeExpr
             printf("assignementNode:\n");
             depth++;
 
             printTreeExpr
             printf("leftExpr:\n");
 
+            depth++;
             printTree(node->assignementNode.leftExpr);
+            depth--;
 
             printTreeExpr
             printf("rightExpr:\n");
 
+            depth++;
             printTree(node->assignementNode.rightExpr);
+            depth--;
 
             depth--;
         break;
@@ -1096,7 +1120,9 @@ void printTree(AST_Node *node)
             
             printTreeExpr
             printf("code:\n");
+            depth++;
             printTree(node->defFuncNode.code);
+            depth--;
 
             depth--;
         break;
@@ -1109,12 +1135,16 @@ void printTree(AST_Node *node)
 
             printTreeExpr
             printf("func:\n");
+            depth++;
             printTree(node->callingFuncNode.func);
+            depth--;
 
             printTreeExpr
             printf("args:\n");
+            depth++;
             printTree(node->callingFuncNode.args);
-
+            depth--;
+            
             depth--;
         break;
 
@@ -1222,7 +1252,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
         switch(tokens[i].e)
         {
             case LEX_TOKEN_PONCTUATION:
-                printf(",\n\t\tchar=\'%c\'",tokens[i].ponctuation.c);
+                printf(",\n\t\tchar=\'%c\'",tokens[i].ponctuation);
             break;
 
             case LEX_TOKEN_UNDEFINED:

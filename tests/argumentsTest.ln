@@ -3,8 +3,8 @@ test(arg0:int32,arg1:int32):int32;
 
 otherTest(arteste:int32,argc:uint32):float
 {
-    test(2,2);
-    return 4.0;
+    testVar:float=test(2,2);
+    return testVar;
 }
 
 
