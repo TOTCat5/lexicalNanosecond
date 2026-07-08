@@ -113,7 +113,7 @@ size_t preprocess(char *str,size_t strSize)
     size_t oneWideChacterRemovalSize=outSize;
     outSize=0;
     outI=0;
-    
+
     bool wasSpace=false;
     // Useless Following Spaces Removal Pass
     for(size_t i=0;i<oneWideChacterRemovalSize;++i)
@@ -128,7 +128,7 @@ size_t preprocess(char *str,size_t strSize)
             }
         }
         wasSpace=str[i]==' ';
-        
+
 
         out[outI++]=str[i];
         ++outSize;
@@ -336,7 +336,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
             listPushBack(tokenList,token);
         }
         wasInString=isInString;
-        
+
         // If i get to reach this one I swear to god I delete this project
         size_t foundIdx=checkForPonctuationToken(str[i]);
         if(foundIdx!=NO_TOKEN)
@@ -553,13 +553,13 @@ struct AST_Node
             AST_Node *value;
             AST_Node *next;
         } valueListNode;
-        
+    
 
         // can be dec if code is NULL
         struct
         {
             const LexToken *funcToken;
-            const LexToken *typeToken;
+            AST_Node *typeNode;
             AST_Node *argList;
 
             AST_Node *code;
@@ -610,7 +610,7 @@ size_t enclosureCheck(uint16_t ponctuation)
         case '[':
         case '(':
             return 1;
-        
+
         case '}':
         case ']':
         case ')':
@@ -619,6 +619,14 @@ size_t enclosureCheck(uint16_t ponctuation)
 
     return 0;
 }
+
+
+AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena);
+
+AST_Node *parseExpr(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena);
+
+AST_Node *parseType(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena);
+
 
 
 AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node) arena)
@@ -649,7 +657,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
         }
     }
 
-    
+
     size_t bracesCount=0;
     for(size_t i=0;i<tokenCount;++i)
     {
@@ -697,7 +705,6 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
                 return result;
             }
-
         }
     }
 
@@ -734,7 +741,6 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
 
                 return result;
             }
-
         }
     }
 
@@ -870,7 +876,7 @@ AST_Node *parseFunc(const LexToken *tokens,size_t tokenCount,arenaType(AST_Node)
                         
                         result->defFuncNode.argList=parseFunc(tokens+2,endArgListIdx-2,arena);
 
-                        result->defFuncNode.typeToken=tokens+endArgListIdx+2;
+                        result->defFuncNode.typeToken=parseType(tokens+endArgListIdx+2,1,arena);
 
 
 
