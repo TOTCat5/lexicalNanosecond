@@ -1,0 +1,4 @@
+main(argc:const(int32),argv:const(stackList(str))):int32
+{
+    return 0;
+}
