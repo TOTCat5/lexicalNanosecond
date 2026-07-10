@@ -595,6 +595,13 @@ struct AST_Node
         {
             const LexToken *token;
         } typeNode;
+
+        struct
+        {
+            AST_Node *typeNode;
+
+            AST_Node *expr;
+        } precisionNode;
     };
 };
 
