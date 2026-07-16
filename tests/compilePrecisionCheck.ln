@@ -1,6 +1,6 @@
 
 \\it's not the last version of this check,i just don't support modulos and equalizations in parsing right now
-doSomeMath:uint64(x:int64[i-5],y:int64)=x*y;
+doSomeMath(x:int64[i-5],y:int64):uint64=x*y;
 
 main():int32
 {

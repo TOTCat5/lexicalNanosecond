@@ -484,8 +484,10 @@ const char *string_AST_NodeEnum(AST_NodeEnum e)
 #define AST_NODE_OPERATION_ENUM\
     X(AST_NODE_OPERATION_ADD)\
     X(AST_NODE_OPERATION_SUB)\
+    X(AST_NODE_OPERATION_NEG)\
     X(AST_NODE_OPERATION_MUL)\
     X(AST_NODE_OPERATION_DIV)\
+    X(AST_NODE_OPERATION_MOD)\
     X(AST_NODE_OPERATION_BOOLEAN_EQUAL)\
     X(AST_NODE_OPERATION_BOOLEAN_NOT_EQUAL)\
     X(AST_NODE_OPERATION_BOOLEAN_LESS_THAN)\
@@ -649,7 +651,10 @@ AST_Node *parseExpr(parseFuncArgs);
 AST_Node *parseType(parseFuncArgs);
 AST_Node *parseList(parseFuncArgs);
 AST_Node *parseStatementList(parseFuncArgs);
+AST_Node *parseStatement(parseFuncArgs);
 AST_Node *parseFile(parseFuncArgs);
+// TODO: improve func name
+AST_Node *parseFileLine(parseFuncArgs);
 AST_Node *parseFunc(parseFuncArgs);
 
 
@@ -699,6 +704,8 @@ AST_Node *parseType(parseFuncArgs)
         result->precisionNode.typeNode=parseType(tokens,startPrecisionCheck,arena);
 
         result->precisionNode.expr=parseExpr(tokens+startPrecisionCheck+1,tokenCount-startPrecisionCheck-2,arena);
+
+        return result;
     }
 
     AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierNode));
@@ -740,6 +747,37 @@ AST_Node *parseExpr(parseFuncArgs)
         return NULL;
     }
 
+    {
+        size_t enclosureCount=0;
+        for(size_t i=tokenCount;i!=0;--i)
+        {
+            if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)
+            {
+                const char ponc=tokens[i-1].ponctuation;
+                enclosureCount+=enclosureCheck(ponc);
+                if(ponc=='='&&enclosureCount==0)
+                {
+                    AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
+                    result->e=AST_NODE_ASSIGNEMENT;
+
+                    result->assignementNode.leftExpr=parseExpr(tokens,i-1,arena);
+                    result->assignementNode.rightExpr=parseExpr(tokens+i,tokenCount-i,arena);
+                    return result;
+                }
+            }
+        }
+    }
+
+    if(tokens[0].e==LEX_TOKEN_ID&&isTokenPonc(tokens[1],':'))
+    {
+        AST_Node *result=arenaAlloc(arena,sizeOfNode(decVarNode));
+        result->e=AST_NODE_DEC_VAR;
+
+        result->decVarNode.nameToken=tokens;
+        result->decVarNode.typeNode=parseType(tokens+2,tokenCount-2,arena);
+
+        return result;
+    }
 
     #define checkOperation(ponctu,oper)\
     {\
@@ -754,7 +792,7 @@ AST_Node *parseExpr(parseFuncArgs)
                 {\
                     AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));\
                     result->e=AST_NODE_EXPRESSION;\
-    \
+\
                     result->expressionNode.op=AST_NODE_OPERATION_##oper;\
                     result->expressionNode.left=parseExpr(tokens,i-1,arena);\
                     result->expressionNode.right=parseExpr(tokens+i,tokenCount-i,arena);\
@@ -765,9 +803,39 @@ AST_Node *parseExpr(parseFuncArgs)
     }
 
     checkOperation('+',ADD)
-    checkOperation('-',SUB)
+    // have to.to handle neg
+    {
+        size_t enclosureCount=0;
+        for(size_t i=tokenCount;i!=0;--i)
+        {
+            if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)
+            {
+                const char ponc=tokens[i-1].ponctuation;
+                enclosureCount+=enclosureCheck(ponc);
+                if(ponc=='-'&&enclosureCount==0)
+                {
+                    AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));
+                    result->e=AST_NODE_EXPRESSION;
+                    if(i==1)
+                    {
+                        result->expressionNode.op=AST_NODE_OPERATION_NEG;
+                        result->expressionNode.left=NULL;
+                        result->expressionNode.right=parseExpr(tokens+i,tokenCount-1,arena);
+
+                        return result;
+                    }
+                    result->expressionNode.op=AST_NODE_OPERATION_SUB;
+                    result->expressionNode.left=parseExpr(tokens,i-1,arena);
+                    result->expressionNode.right=parseExpr(tokens+i,tokenCount-i,arena);
+                    return result;
+                }
+            }
+        }
+    }
+    // checkOperation('-',SUB)
     checkOperation('*',MUL)
     checkOperation('/',DIV)
+    checkOperation('%',MOD)
 
     #undef checkOperation
 
@@ -782,6 +850,7 @@ AST_Node *parseExpr(parseFuncArgs)
             {
                 // reminder: function needs to be treated as pointers to the code though the assembly should keep them as labels
                 AST_Node *result=arenaAlloc(arena,sizeOfNode(callingFuncNode));
+            
                 result->e=AST_NODE_CALLING_FUNC;
 
                 result->callingFuncNode.func=parseExpr(tokens,1,arena);
@@ -796,6 +865,27 @@ AST_Node *parseExpr(parseFuncArgs)
     
     return NULL;
 
+
+}
+AST_Node *parseStatement(parseFuncArgs)
+{
+    if(tokens[0].e==LEX_TOKEN_RETURN)
+    {
+        AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
+        result->e=AST_NODE_RETURN;
+
+        if(isTokenPonc(tokens[tokenCount-1],';'))
+        {
+            result->returnNode.expr=parseExpr(tokens+1,tokenCount-2,arena);
+        }
+        else
+        {
+            result->returnNode.expr=parseExpr(tokens+1,tokenCount-1,arena);
+        }
+        return result;
+    }
+
+    return parseExpr(tokens,tokenCount,arena);
 }
 
 AST_Node *parseStatementList(parseFuncArgs)
@@ -807,25 +897,83 @@ AST_Node *parseStatementList(parseFuncArgs)
         {
             char ponc=tokens[i].ponctuation;
             enclosureCount+=enclosureCheck(ponc);
-            if(ponc==';'&&enclosureCount==0)
+            if(((ponc==';')||(ponc=='}'))&&enclosureCount==0)
             {
+                if(i==tokenCount-1)
+                {
+                    continue;
+                }
+
                 AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
                 result->e=AST_NODE_STATEMENT_LIST;
                 
-                result->statementListNode.node=parseStatementList(tokens,i,arena);
-                result->statementListNode.next=NULL;
-                if(i!=tokenCount-1)
+                result->statementListNode.node=parseStatement(tokens,i,arena);
+
+                result->statementListNode.next=parseStatementList(tokens+i+1,tokenCount-i-1,arena);
+                
+                return result;
+            }
+        }
+    }
+
+    return parseStatement(tokens,tokenCount,arena);
+}
+
+AST_Node *parseFileLine(parseFuncArgs)
+{
+    if(tokens[0].e==LEX_TOKEN_ID&&isTokenPonc(tokens[1],'('))
+    {
+        return parseFunc(tokens,tokenCount,arena);
+    }
+
+    return parseExpr(tokens,tokenCount,arena);
+}
+
+AST_Node *parseFile(parseFuncArgs)
+{
+    size_t enclosureCount=0;
+    for(size_t i=0;i<tokenCount;++i)
+    {
+        if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+        {
+            char ponc=tokens[i].ponctuation;
+            enclosureCount+=enclosureCheck(ponc);
+            if(((ponc==';')||(ponc=='}'))&&enclosureCount==0)
+            {
+                if(i==tokenCount-1)
                 {
-                    result->statementListNode.next=parseStatementList(tokens+i+1,tokenCount-i-1,arena);
+                    continue;
                 }
+
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));
+                result->e=AST_NODE_STATEMENT_LIST;
+                
+                if(ponc=='}')
+                {
+                    result->statementListNode.node=parseFileLine(tokens,i+1,arena);
+                }
+                //then ';'
+                else
+                {
+                    result->statementListNode.node=parseFileLine(tokens,i,arena);
+                }
+                
+                result->statementListNode.next=parseFile(tokens+i+1,tokenCount-i-1,arena);
 
                 return result;
             }
         }
     }
+
+    if(isTokenPonc(tokens[tokenCount-1],';'))
+    {
+        return parseFileLine(tokens,tokenCount-1,arena);
+    }
+    else
+    {
+        return parseFileLine(tokens,tokenCount,arena);
+    }
 }
-
-
 
 
 AST_Node *parseList(parseFuncArgs)
@@ -835,8 +983,7 @@ AST_Node *parseList(parseFuncArgs)
         return NULL;
     }
     
-    AST_Node *result=arenaAlloc(arena,sizeOfNode(valueListNode));
-    result->e=AST_NODE_VALUE_LIST;
+    
 
     size_t enclosureCount=0;
 
@@ -849,24 +996,117 @@ AST_Node *parseList(parseFuncArgs)
 
             if(enclosureCount==0&&ponc==',')
             {
+                if(i==tokenCount-1)
+                {
+                    continue;
+                }
+
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(valueListNode));
+                result->e=AST_NODE_VALUE_LIST;
                 result->valueListNode.value=parseExpr(tokens,i,arena);
 
-                result->valueListNode.next=NULL;
-                if(i!=tokenCount-1)
+                result->valueListNode.next=parseList(tokens+i+1,tokenCount-i-1,arena);
+
+                return result;
+            }
+        }
+    }
+
+
+    return parseExpr(tokens,tokenCount,arena);
+}
+
+AST_Node *parseFunc(parseFuncArgs)
+{
+    AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
+    result->e=AST_NODE_DEF_FUNC;
+
+    result->defFuncNode.funcToken=tokens;
+
+    // points at the ')'
+    size_t endArgList=0;
+    {
+        size_t enclosureCount=0;;
+        for(size_t i=1;i<tokenCount;++i)
+        {
+            if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+            {
+                char ponc=tokens[i].ponctuation;
+                enclosureCount+=enclosureCheck(ponc);
+
+                if(enclosureCount==0&&ponc==')')
                 {
-                    result->valueListNode.next=parseList(tokens+i+1,tokenCount-i-1,arena);
+                    endArgList=i;
+                    break;
                 }
             }
         }
     }
 
+
+    if(endArgList==0)
+    {
+        return NULL;
+    }
+
+    result->defFuncNode.argList=parseList(tokens+2,endArgList-2,arena);
+
+    size_t startCodeIdx=0;
+    // '='
+    bool onlyExpression=false;
+    {
+        size_t enclosureCount=0;
+        for(size_t i=endArgList+1;i<tokenCount;++i)
+        {
+            if(tokens[i].e==LEX_TOKEN_PONCTUATION)
+            {
+                char ponc=tokens[i].ponctuation;
+                enclosureCount+=enclosureCheck(ponc);
+
+                if(enclosureCount==1&&ponc=='{')
+                {
+                    startCodeIdx=i;
+                    onlyExpression=false;
+                    break;
+                }
+
+                if(enclosureCount==0&&ponc=='=')
+                {
+                    startCodeIdx=i;
+                    onlyExpression=true;
+                    break;
+                }
+            }
+        }
+    }
+    if(startCodeIdx==0)
+    {
+        result->defFuncNode.typeNode=parseType(tokens+endArgList+2,tokenCount-endArgList-2,arena);
+        result->defFuncNode.code=NULL;
+
+        return result;
+    }
+
+    result->defFuncNode.typeNode=parseType(tokens+endArgList+2,startCodeIdx-endArgList-2,arena);
+
+    if(onlyExpression)
+    {
+        result->defFuncNode.code=arenaAlloc(arena,sizeOfNode(returnNode));
+        result->defFuncNode.code->e=AST_NODE_RETURN;
+
+        result->defFuncNode.code->returnNode.expr=parseExpr(tokens+startCodeIdx+1,tokenCount-startCodeIdx-1,arena);
+    }
+    else
+    {
+        result->defFuncNode.code=parseStatementList(tokens+startCodeIdx+1,tokenCount-startCodeIdx-2,arena);
+    }
     return result;
 }
 
 
 bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **start)
 {
-    *start=parseFuncDeprecated(tokenList,listLength(tokenList),arena);
+    *start=parseFile(tokenList,listLength(tokenList),arena);
 
     return *start==NULL;
     
@@ -950,12 +1190,19 @@ void printTree(AST_Node *node)
                 printTreeExpr
                 printf("left:\n");
 
+                depth++;
+
                 printTree(node->expressionNode.left);
+
+                depth--;
             }
             printTreeExpr
             printf("right:\n");
 
+            depth++;
             printTree(node->expressionNode.right);
+
+            depth--;
 
             depth--;
         break;
@@ -993,19 +1240,19 @@ void printTree(AST_Node *node)
             printf("valueList:\n");
 
             depth++;
-            if(node->statementListNode.node->e==AST_NODE_VALUE_LIST)
+            if(node->valueListNode.value->e==AST_NODE_VALUE_LIST)
             {
                 depth--;
             }
-            printTree(node->statementListNode.node);
-            if(node->statementListNode.next!=NULL)
+            printTree(node->valueListNode.value);
+            if(node->valueListNode.next!=NULL)
             {
-                printTree(node->statementListNode.next);
+                printTree(node->valueListNode.next);
             }
 
             depth--;
 
-            if(node->statementListNode.node->e==AST_NODE_VALUE_LIST)
+            if(node->valueListNode.value->e==AST_NODE_VALUE_LIST)
             {
                 depth++;
             }
@@ -1099,7 +1346,7 @@ void printTree(AST_Node *node)
 
         case AST_NODE_MODIFIER:
             printTreeExpr
-            printf("modifierNode:\n");
+            printf("modifier:\n");
             
             depth++;
 
@@ -1121,7 +1368,7 @@ void printTree(AST_Node *node)
 
         case AST_NODE_TYPE:
             printTreeExpr
-            printf("typeNode:\n");
+            printf("type:\n");
             
             depth++;
 
@@ -1131,6 +1378,27 @@ void printTree(AST_Node *node)
             printLexToken(stdout,node->typeNode.token);
             printf("\"\n");
 
+
+            depth--;
+        break;
+
+        case AST_NODE_PRECISION:
+            printTreeExpr
+            printf("precision:\n");
+
+            depth++;
+
+            printTreeExpr
+            printf("typeNode\n");
+            depth++;
+            printTree(node->precisionNode.typeNode);
+            depth--;
+            
+            printTreeExpr
+            printf("expr:\n");
+            depth++;
+            printTree(node->precisionNode.expr);
+            depth--;
 
             depth--;
         break;
@@ -1267,7 +1535,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
 
 
-    FILE *inFile=fopen("tests/argumentsTest.ln","rb");
+    FILE *inFile=fopen("tests/compilePrecisionCheck.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

@@ -2,3 +2,8 @@ main(argc:const(int32),argv:const(stackList(str))):int32
 {
     return 0;
 }
+
+test(yah:float):float
+{
+    return yah+2788;
+}
