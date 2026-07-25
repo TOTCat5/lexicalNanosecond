@@ -60,6 +60,43 @@ typedef struct LexToken
 
 #define isTokenPonc(token,ponc) (((token).e==LEX_TOKEN_PONCTUATION)&&((token).ponctuation==ponc)) 
 
+// the str is null-terminated
+static bool isLexTokenEqualToStr(LexToken *token,char *str)
+{
+    if(token->e==LEX_TOKEN_PONCTUATION)
+    {
+        if(str[0]!='\0')
+        {
+            if(str[1]=='\0'&&str[0]==token->ponctuation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    size_t idx=0;
+    bool hasDifference=false;
+    while(
+        str[idx]!='\0'&&
+        idx<token->strLen
+    )
+    {
+        if(str[idx]!=token->str[idx])
+        {
+            hasDifference=true;
+            break;
+        }
+        idx++;
+    }
+    if(idx==token->strLen)
+    {
+        hasDifference=true;
+    }
+
+    return !hasDifference;
+}
 
 static void printLexToken(FILE *file,const LexToken *token)
 {

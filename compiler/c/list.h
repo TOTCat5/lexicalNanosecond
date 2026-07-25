@@ -13,7 +13,9 @@ typedef struct _d_ListHeader_
 #define listGetHeader(list) ((_d_ListHeader_ *)(list)-1)
 #define listLength(list)    (listGetHeader(list)->length)
 #define listCapacity(list)  (listGetHeader(list)->capacity)
-#define listType(type) type *
+#define listStart(list)     ((list)[0])
+#define listEnd(list)       ((list)[listLength(list)-1])
+#define listType(type)      type *
 
 static inline uint64_t next_pow2(uint64_t x)
 {
@@ -27,6 +29,10 @@ static inline uint64_t next_pow2(uint64_t x)
     __qa_header_p_->length=0;\
     __qa_header_p_->capacity=roundedCapacity;\
     list=(void *)(__qa_header_p_+1);\
+} while(0)
+
+#define listDestroy(list) do{\
+    free(listGetHeader(list));\
 } while(0)
 
 
@@ -52,6 +58,10 @@ static inline uint64_t next_pow2(uint64_t x)
     memmove((list)+idx+1,list+idx,(__qa_header_p_->length-idx)*sizeof(*list));\
     [idx]=item;\
     __qa_header_p_->length++;\
+} while(0)
+
+#define listPopBack(list) do{\
+    listGetHeader(list)->length=(listGetHeader(list)->length!=0)?listGetHeader(list)->length-1:0;\
 } while(0)
 
 #define listRemoveAtIndex(list,idx) do{\
