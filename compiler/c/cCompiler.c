@@ -1,6 +1,6 @@
 #include "lex.h"
 #include "parse.h"
-
+#include "interLang.h"
 
 
 
@@ -378,6 +378,8 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
+    generateInterLangCode(treeRoot,outFile);
+
     // generateAssembly(outFile,treeRoot);
 
 
@@ -390,10 +392,10 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
 int main(int argc,char *argv[])
 {
-    FILE *outFile=fopen("compiler/out/cCompiler.asm","wb");
+    FILE *outFile=fopen("compiler/out/cCompiler.intLang","wb");
 
 
-    FILE *inFile=fopen("tests/compilePrecisionCheck.ln","rb");
+    FILE *inFile=fopen("tests/exitImmediatly.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);
@@ -403,6 +405,7 @@ int main(int argc,char *argv[])
     fread(buf,fileSize,1,inFile);
     compile(buf,fileSize,outFile);
 
+    fclose(outFile);
 
 }
 

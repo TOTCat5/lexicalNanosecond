@@ -1,0 +1,3 @@
+DEF INT32 main()
+INT32_ASSIGN(returnValue,0)
+RETURN_FUNC

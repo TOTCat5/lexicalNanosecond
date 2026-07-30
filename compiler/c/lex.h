@@ -61,7 +61,7 @@ typedef struct LexToken
 #define isTokenPonc(token,ponc) (((token).e==LEX_TOKEN_PONCTUATION)&&((token).ponctuation==ponc)) 
 
 // the str is null-terminated
-static bool isLexTokenEqualToStr(LexToken *token,char *str)
+static bool isLexTokenEqualToStr(const LexToken *token,char *str)
 {
     if(token->e==LEX_TOKEN_PONCTUATION)
     {
@@ -76,26 +76,45 @@ static bool isLexTokenEqualToStr(LexToken *token,char *str)
         return false;
     }
 
-    size_t idx=0;
-    bool hasDifference=false;
-    while(
-        str[idx]!='\0'&&
-        idx<token->strLen
-    )
+    size_t strLen=strlen(str);
+
+    if(strLen!=token->strLen)
     {
-        if(str[idx]!=token->str[idx])
-        {
-            hasDifference=true;
-            break;
-        }
-        idx++;
-    }
-    if(idx==token->strLen)
-    {
-        hasDifference=true;
+        return false;
     }
 
-    return !hasDifference;
+    if(strncmp(token->str,str,strLen))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static bool isLexTokenEqual(LexToken *a,LexToken *b)
+{
+    if(a->e!=b->e)
+    {
+        return false;
+    }
+
+    if(a->e==LEX_TOKEN_PONCTUATION)
+    {
+        return a->ponctuation==b->ponctuation;
+    }
+
+    if(a->strLen!=b->strLen)
+    {
+        return false;
+    }
+
+    if(strncmp(a->str,b->str,a->strLen))
+    {
+        return false;
+    }
+
+
+    return true;
 }
 
 static void printLexToken(FILE *file,const LexToken *token)
