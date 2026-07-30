@@ -1,7 +1,7 @@
 #include "parse.h"
 
 /*
-    interLang is formed as "type_op(result,type(args)...)"
+    interLang is formed as "op_type(result,type(args)...)"
 
     the types are basically the normal types but in uppercase
     
@@ -11,7 +11,7 @@
 
     you'll still have return a value
 
-    "DEF TYPE funcName(args)" apart from rising my python senses wil define a function
+    "DEF funcName(args)" apart from rising my python senses wil define a function
 
     when calling a func,you shall use "FUNC(funcName)"
 

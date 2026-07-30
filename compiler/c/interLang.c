@@ -42,8 +42,10 @@ void cleanScope(InterLangVarScope *scope,FILE *file)
     {
         if(!listEnd(*scope).included)
         {
+            fputs("POP_",file);
             fputs(typeNames[listEnd(*scope).e],file);
-            fputs("_POP(",file);
+            fputs("(",file);
+            
             fputLexToken(listEnd(*scope).name,file);
             fputs(")\n",file);
         }
@@ -64,8 +66,9 @@ void pushToScope(InterLangVarScope *scope,InterLangVar *var,FILE *file)
     listPushBack(*scope,*var);
     if(!var->included)
     {
+        fputs("PUSH_",file);
         fputs(typeNames[listEnd(*scope).e],file);
-        fputs("_PUSH(",file);
+        fputs("(",file);
         fputLexToken(listEnd(*scope).name,file);
         fputs(")\n",file);
     }
@@ -109,7 +112,7 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
         {
             if(tree->returnNode.expr->e==AST_NODE_CONSTANT)
             {
-                fputs("INT32_ASSIGN(returnValue,",outputFile);
+                fputs("ASSIGN_INT32(returnValue,",outputFile);
 
                 fputLexToken(tree->returnNode.expr->constantNode.token,outputFile);
 
@@ -131,7 +134,7 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
 
             fputLexToken(tree->defFuncNode.funcToken,outputFile);
 
-            fputs(" \n",outputFile);
+            fputs("\n",outputFile);
 
 
             InterLangVarScope newScope;
