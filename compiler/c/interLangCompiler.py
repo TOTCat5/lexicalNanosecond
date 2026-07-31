@@ -1,4 +1,7 @@
 
+registres={"eax":{"INT32":"eax","UINT32":"eax","INT16":"ax","UINT16":"ax"}}
+
+
 with open("compiler/out/cCompiler.asm","w") as outFile:
     with open("compiler/out/cCompiler.intLang","r") as inFile:
         lines=inFile.readlines()
@@ -16,6 +19,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
             if test[0]=="DEF":
                 outFile.write(test[2]+":\n")
+                continue
 
             if test[0].startswith("ASSIGN_"):
                 assignCommand=test[0][len("ASSIGN_"):]
@@ -23,13 +27,16 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
                 outFile.write("mov ")
 
-                startArgsIdx=assignCommand.find("(")+1
+
+                startArgsIdx=assignCommand.find("(")
                 endArgsIdx  =assignCommand.find(")")
 
-                assignArgs=assignCommand[startArgsIdx:endArgsIdx].split(",")
+                typeName=assignCommand[:startArgsIdx]
+
+                assignArgs=assignCommand[startArgsIdx+1:endArgsIdx].split(",")
 
                 if assignArgs[0]=="returnValue":
-                    outFile.write("eax, ")
+                    outFile.write(registres["eax"][typeName]+", ")
 
                 outFile.write(assignArgs[1])
 
@@ -38,8 +45,20 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
                 print(assignArgs)
 
+                continue
+
 
             if test[0]=="RETURN_FUNC":
                 outFile.write("ret\n")
 
+                continue
+
+
+            if test[0]=="END_FUNC":
+                continue
+
             print(test)
+
+
+            print("unhandled case:"+i)
+            exit(-1)

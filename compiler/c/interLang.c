@@ -152,10 +152,14 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
             };
             pushToScope(scope,&var,outputFile);
             generateInterLangCodeInScope(tree->defFuncNode.code,&newScope,outputFile);
+
+            fputs("END_FUNC\n",outputFile);
         }
         break;
 
-        
+        default:
+            printf("error,i don't deal with this bullshit");
+        break;
             
     }
 }
