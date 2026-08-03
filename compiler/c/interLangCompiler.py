@@ -1,5 +1,5 @@
 
-registres={"eax":{"INT32":"eax","UINT32":"eax","INT16":"ax","UINT16":"ax"}}
+registers={"eax":{"INT32":"eax","UINT32":"eax","INT16":"ax","UINT16":"ax"}}
 
 
 with open("compiler/out/cCompiler.asm","w") as outFile:

@@ -95,6 +95,7 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
 
 void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *outputFile)
 {
+    static size_t creationIdx=0;
     switch(tree->e)
     {
         case AST_NODE_DEC_VAR:
