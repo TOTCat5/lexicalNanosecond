@@ -1,5 +1,4 @@
 import io all;
-import str all;
 
 main():int32
 {
