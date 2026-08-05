@@ -36,7 +36,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
                 assignArgs=assignCommand[startArgsIdx+1:endArgsIdx].split(",")
 
                 if assignArgs[0]=="returnValue":
-                    outFile.write(registres["eax"][typeName]+", ")
+                    outFile.write(registers["eax"][typeName]+", ")
 
                 outFile.write(assignArgs[1])
 
