@@ -12,6 +12,7 @@
     you'll still have return a value
 
     "DEF funcName(args)" apart from rising my python senses wil define a function
+    where as "END_FUNC" will signify the start of the end of the func code and the start of the cleanup code,as "END_OF_END_FUNC" will signify its end
 
     when calling a func,you shall use "FUNC(funcName)"
 
