@@ -4,16 +4,24 @@ char *typeNames[]={
     "BOOL",
     "INT16",
     "INT32",
+    "INT64"
     "UINT16",
     "UINT32",
+    "UINT64",
+    "FLOAT",
+    "DOUBLE"
 };
 
 char *lnTypeNames[]={
     "bool",
     "int16",
     "int32",
+    "int64",
     "uint16",
-    "uint32"
+    "uint32",
+    "uint64",
+    "float",
+    "double"
 };
 
 // TODO:change code place
@@ -42,6 +50,18 @@ typedef listType(InterLangVar) InterLangVarScope;
 
 
 
+void fputInterLangVar(InterLangVar *var,FILE *file)
+{
+    if(var->pointToStr)
+    {
+        fputs(var->nameStr,file);
+    }
+    else
+    {
+        fputLexToken(var->nameToken,file);
+    }
+}
+
 
 void cleanScope(InterLangVarScope *scope,FILE *file)
 {
@@ -53,7 +73,7 @@ void cleanScope(InterLangVarScope *scope,FILE *file)
             fputs(typeNames[listEnd(*scope).e],file);
             fputs("(",file);
             
-            fputLexToken(listEnd(*scope).nameToken,file);
+            fputInterLangVar(&listEnd(*scope),file);
             fputs(")\n",file);
         }
 
@@ -105,12 +125,27 @@ InterLangVar *getInterLangVarInScopeFromAST_VarNode(AST_Node *node,InterLangVarS
     {
         if(scope[i]->nameToken==node->varNode.token)
         {
-            return scope+i;
+            return (*scope)+i;
         }
     }
 
     return NULL;
 }
+
+InterLangTypeEnum getTypeOfConstantNodeLexToken(const LexToken *token)
+{
+    for(size_t i=0;i<token->strLen;++i)
+    {
+        if(token->str[i]=='.')
+        {
+            return InterLangTypeDouble;
+        }
+    }
+
+    return InterLangTypeInt32;
+}
+
+
 
 void generateInterLangCodeInNewScope(AST_Node *tree,InterLangVarScope *scope,FILE *outputFile);
 void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *outputFile);
@@ -134,15 +169,14 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
 
         case AST_NODE_RETURN:
         {
-            if(tree->returnNode.expr->e==AST_NODE_CONSTANT)
-            {
-                fputs("ASSIGN_INT32(returnValue,",outputFile);
+            InterLangVar *var=generateInterLangCodeInExpr(tree->returnNode.expr,scope,outputFile);
 
-                fputLexToken(tree->returnNode.expr->constantNode.token,outputFile);
+            fputs("ASSIGN_",outputFile);
+            fputs(typeNames[var->e],outputFile);
+            fputs("(returnValue,",outputFile);
+            fputInterLangVar(var,outputFile);
+            fputs(")\n",outputFile);
 
-                fputs(")\n",outputFile);
-                fputs("RETURN_FUNC\n",outputFile);
-            }
         }
         break;
 
@@ -174,10 +208,14 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
                 .nameToken=&returnValue,
                 .included=true
             };
-            pushToScope(scope,&var,outputFile);
+            pushToScope(&newScope,&var,outputFile);
             generateInterLangCodeInScope(tree->defFuncNode.code,&newScope,outputFile);
 
             fputs("END_FUNC\n",outputFile);
+
+            cleanScope(&newScope,outputFile);
+
+            fputs("END_OF_END_FUNCD\n",outputFile);
         }
         break;
 
@@ -226,7 +264,7 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
         {\
             if(tree->expressionNode.left->e==AST_NODE_VAR)\
             {\
-                vars[0]=getInterLangVarInScopeFromAST_VarNode(tree->expressionNode.right->varNode.token,scope);\
+                vars[0]=getInterLangVarInScopeFromAST_VarNode(tree->expressionNode.left,scope);\
             }\
         }\
         \
@@ -234,7 +272,7 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
         {\
             if(tree->expressionNode.right->e==AST_NODE_VAR)\
             {\
-                vars[1]=getInterLangVarInScopeFromAST_VarNode(tree->expressionNode.right->varNode.token,scope);\
+                vars[1]=getInterLangVarInScopeFromAST_VarNode(tree->expressionNode.right,scope);\
             }\
         }
 
@@ -247,8 +285,9 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
 
 
             char varName[256]={0};
+            varName[0]='t';
 
-            size_t tempIdx=creationIdx;
+            size_t tempIdx=++creationIdx;
 
             for(size_t i=1;i<256;++i)
             {
@@ -261,6 +300,36 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
                 tempIdx>>=4;
             }
 
+            InterLangVar tempForConstantVar[2]={0};
+            
+            if(!vars[0])
+            {
+                if(tree->expressionNode.left->e!=AST_NODE_CONSTANT)
+                {
+                    return NULL;
+                }
+
+                tempForConstantVar[0].e=getTypeOfConstantNodeLexToken(tree->expressionNode.left->constantNode.token);
+                tempForConstantVar[0].nameToken=tree->expressionNode.left->constantNode.token;
+
+                vars[0]=tempForConstantVar+0;
+            }
+
+            if(!vars[1])
+            {
+                if(tree->expressionNode.right->e!=AST_NODE_CONSTANT)
+                {
+                    return NULL;
+                }
+
+                tempForConstantVar[1].e=getTypeOfConstantNodeLexToken(tree->expressionNode.right->constantNode.token);
+                tempForConstantVar[1].nameToken=tree->expressionNode.right->constantNode.token;
+
+
+                vars[1]=tempForConstantVar+1;
+            }
+
+
             InterLangVar resultVar={
                 .e=vars[0]->e,
                 .nameStr=strdup(varName),
@@ -271,15 +340,22 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
 
             fputs("ADD_",outputFile);
 
+            
+
+
             fputs(typeNames[vars[0]->e],outputFile);
 
             fputs("(",outputFile);
             fputs(resultVar.nameStr,outputFile);
 
             fputs(",",outputFile);
-            fputs(vars[0]->nameStr,outputFile);
+
+
+            
+            fputInterLangVar(vars[0],outputFile);
             fputs(",",outputFile);
-            fputs(vars[1]->nameStr,outputFile);
+            fputInterLangVar(vars[1],outputFile);
+            fputs(")\n",outputFile);
 
             
 

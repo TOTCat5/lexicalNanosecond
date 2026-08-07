@@ -49,7 +49,7 @@ static inline uint64_t next_pow2(uint64_t x)
 #define listPushBack(list,item) do{\
     listMemoryCheck(list)\
     _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
-    list[__qa_header_p_->length++]=item;\
+    (list)[__qa_header_p_->length++]=item;\
 } while(0)
 
 #define listEmplace(list,item,idx) do{\
@@ -61,7 +61,7 @@ static inline uint64_t next_pow2(uint64_t x)
 } while(0)
 
 #define listPopBack(list) do{\
-    listGetHeader(list)->length=(listGetHeader(list)->length!=0)?listGetHeader(list)->length-1:0;\
+    listGetHeader(list)->length=(listGetHeader(list)->length!=0)?(listGetHeader(list)->length-1):0;\
 } while(0)
 
 #define listRemoveAtIndex(list,idx) do{\

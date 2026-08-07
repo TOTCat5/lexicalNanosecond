@@ -395,7 +395,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.intLang","wb");
 
 
-    FILE *inFile=fopen("tests/exitImmediatly.ln","rb");
+    FILE *inFile=fopen("tests/addInterLang.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

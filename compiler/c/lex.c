@@ -206,20 +206,18 @@ size_t checkForPonctuationToken(char token)
     return foundIdx;
 }
 
-bool isTokenDecimalInteger(LexToken *token)
+bool isTokenInteger(LexToken *token)
 {
-    if(token->e!=LEX_TOKEN_PONCTUATION)
+    if(token->e==LEX_TOKEN_PONCTUATION)
     {
-        for(size_t i=0;i<token->strLen;++i)
-        {
-            char t=token->str[i];
-            if(!(t>='0'&&t<='9'))
-            {
-                return false;
-            }
-        }
+        return false;
+    }
+
+    if((token->str[0]>='0')&&(token->str[0]<='9'))
+    {
         return true;
     }
+
     return false;
 }
 
@@ -245,28 +243,6 @@ bool isTokenString(LexToken *token)
     return true;
 }
 
-bool isTokenHexInteger(LexToken *token)
-{
-    if(token->e!=LEX_TOKEN_PONCTUATION&&token->strLen>2)
-    {
-        if(token->str[0]=='0'&&token->str[1]=='x')
-        {
-            for(size_t i=token->strLen-1;i>2;--i)
-            {
-                char t=token->str[i];
-                if(!(
-                    (t>='0'&&t<='9')||
-                    (t>='a'&&t<='f')
-                ))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-    return false;
-}
 
 
 // Assume str is null-terminated
@@ -362,7 +338,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                 continue;
             }
 
-            bool isDecimalNumber=isTokenDecimalInteger(tokenList+i);
+            bool isDecimalNumber=isTokenInteger(tokenList+i);
             if(isDecimalNumber)
             {
                 tokenList[i].e=LEX_TOKEN_CONSTANT;
@@ -370,7 +346,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                 {
                     bool isFloatNumber=tokenList[i+1].e==LEX_TOKEN_PONCTUATION&&
                                         tokenList[i+1].ponctuation=='.'&&
-                                        isTokenDecimalInteger(tokenList+i+2);
+                                        isTokenInteger(tokenList+i+2);
                     if(isFloatNumber)
                     {
                         listRemoveAtIndex(tokenList,i+1);
@@ -382,12 +358,6 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
                 continue;
             }
 
-            bool isHexNumber=isTokenHexInteger(tokenList+i);
-            if(isHexNumber)
-            {
-                tokenList[i].e=LEX_TOKEN_CONSTANT;
-                continue;
-            }
 
             tokenList[i].e=LEX_TOKEN_ID;
 

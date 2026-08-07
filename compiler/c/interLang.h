@@ -29,8 +29,13 @@ typedef enum InterLangTypeEnum
     InterLangTypeBool,
     InterLangTypeInt16,
     InterLangTypeInt32,
+    InterLangTypeInt64,
     InterLangTypeUint16,
     InterLangTypeUint32,
+    InterLangTypeUint64,
+    InterLangTypeFloat,
+    InterLangTypeDouble,
+    
     InterLangTypeNotAType=0xffffffff
 } InterLangTypeEnum;
 
