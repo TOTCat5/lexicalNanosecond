@@ -2,24 +2,38 @@
 
 char *typeNames[]={
     "BOOL",
+
+    "INT8",
+    "UINT8"
+    
     "INT16",
-    "INT32",
-    "INT64"
     "UINT16",
+    
+    "INT32",
     "UINT32",
+    
+    "INT64"
     "UINT64",
+    
     "FLOAT",
     "DOUBLE"
 };
 
 char *lnTypeNames[]={
     "bool",
+    
+    "int8",
+    "uint8",
+    
     "int16",
-    "int32",
-    "int64",
     "uint16",
+    
+    "int32",
     "uint32",
+    
+    "int64",
     "uint64",
+    
     "float",
     "double"
 };
@@ -62,7 +76,26 @@ void fputInterLangVar(InterLangVar *var,FILE *file)
     }
 }
 
+// POP_... every variable created WITHOUT deleting it
+void popScope(InterLangVarScope *scope,FILE *file)
+{
+    for(size_t i=0;i<listLength(*scope);++i)
+    {
+        if((*scope)[i].included)
+        {
+            continue;
+        }
 
+        fputs("POP_",file);
+        fputs(typeNames[(*scope)[i].e],file);
+        fputs("(",file);
+        
+        fputInterLangVar(&((*scope)[i]),file);
+        fputs(")\n",file);
+    }
+}
+
+// same as popScope but delete list afterward
 void cleanScope(InterLangVarScope *scope,FILE *file)
 {
     while(listLength(*scope)!=0)
@@ -119,17 +152,35 @@ InterLangTypeEnum lnTypeNameToInterLangTypeEnum(const LexToken *lnName)
     return InterLangTypeNotAType;
 }
 
-InterLangVar *getInterLangVarInScopeFromAST_VarNode(AST_Node *node,InterLangVarScope *scope)
+InterLangVar *getInterLangVarInScopeFromLexToken(const LexToken *token,InterLangVarScope *scope)
 {
-    for(size_t i=0;i<listLength(scope);++i)
+    for(size_t i=0;i<listLength(*scope);++i)
     {
-        if(scope[i]->nameToken==node->varNode.token)
+        if(isLexTokenEqual((*scope)[i].nameToken,token))
         {
             return (*scope)+i;
         }
     }
 
     return NULL;
+}
+
+InterLangVar *getInterLangVarInScopeFromStr(char *str,InterLangVarScope *scope)
+{
+    for(size_t i=0;i<listLength(*scope);++i)
+    {
+        if(isLexTokenEqualToStr( (*scope)[i].nameToken,str))
+        {
+            return (*scope)+i;
+        }
+    }
+
+    return NULL;
+}
+
+InterLangVar *getInterLangVarInScopeFromAST_VarNode(AST_Node *node,InterLangVarScope *scope)
+{
+    return getInterLangVarInScopeFromLexToken(node->varNode.token,scope);
 }
 
 InterLangTypeEnum getTypeOfConstantNodeLexToken(const LexToken *token)
@@ -172,10 +223,14 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
             InterLangVar *var=generateInterLangCodeInExpr(tree->returnNode.expr,scope,outputFile);
 
             fputs("ASSIGN_",outputFile);
-            fputs(typeNames[var->e],outputFile);
+            fputs(typeNames[__max(getInterLangVarInScopeFromStr("returnValue",scope)->e,var->e)],outputFile);
             fputs("(returnValue,",outputFile);
             fputInterLangVar(var,outputFile);
             fputs(")\n",outputFile);
+
+            popScope(scope,outputFile);
+
+            fputs("RETURN_FUNC\n",outputFile);
 
         }
         break;
@@ -185,37 +240,82 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
         {
             fputs("DEF ",outputFile);
 
-            InterLangTypeEnum returnvalueTypeEnum=lnTypeNameToInterLangTypeEnum(tree->defFuncNode.typeNode->typeNode.token);
-            fputs(typeNames[returnvalueTypeEnum],outputFile);
+            InterLangTypeEnum returnValueTypeEnum=lnTypeNameToInterLangTypeEnum(tree->defFuncNode.typeNode->typeNode.token);
+            fputs(typeNames[returnValueTypeEnum],outputFile);
 
             fputs(" ",outputFile);
 
             fputLexToken(tree->defFuncNode.funcToken,outputFile);
 
-            fputs("\n",outputFile);
-
-
+            
+            
+            
             InterLangVarScope newScope;
             createScope(&newScope);
+            
+            AST_Node *code=tree->defFuncNode.argList;
+            while(code->e==AST_NODE_VALUE_LIST)
+            {
+                // should be AST_NODE_DEC_VAR
+                if(code->valueListNode.value->e!=AST_NODE_DEC_VAR)
+                {
+                    return;
+                }
+                
+                InterLangVar var={
+                    .nameToken=code->valueListNode.value->decVarNode.nameToken,
+                    .e=lnTypeNameToInterLangTypeEnum(code->valueListNode.value->decVarNode.typeNode->typeNode.token),
+                    .included=true
+                };
+                
+                pushToScope(&newScope,&var,outputFile);
 
-            const LexToken returnValue={
+                fputs(" ",outputFile);
+
+                fputs(typeNames[var.e],outputFile);
+
+                fputs(" ",outputFile);
+
+                fputInterLangVar(&var,outputFile);
+
+                code=code->valueListNode.next;
+            }
+            {
+                InterLangVar var={
+                    .nameToken=code->decVarNode.nameToken,
+                    .e=lnTypeNameToInterLangTypeEnum(tree->decVarNode.typeNode->typeNode.token),
+                    .included=true
+                };
+                pushToScope(&newScope,&var,outputFile);
+                
+                fputs(" ",outputFile);
+
+                fputs(typeNames[var.e],outputFile);
+
+                fputs(" ",outputFile);
+
+                fputInterLangVar(&var,outputFile);
+            }
+            
+            fputs("\n",outputFile);
+
+            const LexToken returnValueToken={
                 .e=LEX_TOKEN_ID,
                 .str="returnValue",
                 .strLen=sizeof("returnValue")-1
             };
-            InterLangVar var={
-                .e=returnvalueTypeEnum,
-                .nameToken=&returnValue,
+            InterLangVar returnValueVar={
+                .e=returnValueTypeEnum,
+                .nameToken=&returnValueToken,
                 .included=true
             };
-            pushToScope(&newScope,&var,outputFile);
+            pushToScope(&newScope,&returnValueVar,outputFile);
             generateInterLangCodeInScope(tree->defFuncNode.code,&newScope,outputFile);
 
             fputs("END_FUNC\n",outputFile);
 
-            cleanScope(&newScope,outputFile);
+            listDestroy(newScope);
 
-            fputs("END_OF_END_FUNCD\n",outputFile);
         }
         break;
 
@@ -276,94 +376,87 @@ InterLangVar *generateInterLangCodeInExpr(AST_Node *tree,InterLangVarScope *scop
             }\
         }
 
+    #define handleArithemticOp(opName)\
+        InterLangVar *vars[2]={NULL,NULL};\
+        getVarsExpr(vars)\
+        char varName[256]={0};\
+        varName[0]='t';\
+        size_t tempIdx=++creationIdx;\
+        for(size_t i=1;i<256;++i)\
+        {\
+            if(!tempIdx)\
+            {\
+                break;\
+            }\
+            varName[i]=numToHex[tempIdx&0xf];\
+            tempIdx>>=4;\
+        }\
+        InterLangVar tempForConstantVar[2]={0};\
+        if(!vars[0])\
+        {\
+            if(tree->expressionNode.left->e!=AST_NODE_CONSTANT)\
+            {\
+                printf("tree->expressionNode.left->e!=AST_NODE_CONSTANT\n");\
+            }\
+            tempForConstantVar[0].e=getTypeOfConstantNodeLexToken(tree->expressionNode.left->constantNode.token);\
+            tempForConstantVar[0].nameToken=tree->expressionNode.left->constantNode.token;\
+            vars[0]=tempForConstantVar+0;\
+        }\
+        if(!vars[1])\
+        {\
+            if(tree->expressionNode.right->e!=AST_NODE_CONSTANT)\
+            {\
+                printf("tree->expressionNode.right->e!=AST_NODE_CONSTANT\n");\
+            }\
+            tempForConstantVar[1].e=getTypeOfConstantNodeLexToken(tree->expressionNode.right->constantNode.token);\
+            tempForConstantVar[1].nameToken=tree->expressionNode.right->constantNode.token;\
+            vars[1]=tempForConstantVar+1;\
+        }\
+        InterLangVar resultVar={\
+            .e=vars[0]->e,\
+            .nameStr=strdup(varName),\
+            .pointToStr=true\
+        };\
+        pushToScope(scope,&resultVar,outputFile);\
+        fputs(opName "_",outputFile);\
+        fputs(typeNames[vars[0]->e],outputFile);\
+        fputs("(",outputFile);\
+        fputs(resultVar.nameStr,outputFile);\
+        fputs(",",outputFile);\
+        fputInterLangVar(vars[0],outputFile);\
+        fputs(",",outputFile);\
+        fputInterLangVar(vars[1],outputFile);\
+        fputs(")\n",outputFile);\
+        return &listEnd(*scope);\
+
     switch(tree->expressionNode.op)
     {
         case AST_NODE_OPERATION_ADD:
         {
-            InterLangVar *vars[2]={NULL,NULL};
-            getVarsExpr(vars)
+            handleArithemticOp("ADD")
+        }
+        break;
 
+        case AST_NODE_OPERATION_SUB:
+        {
+            handleArithemticOp("SUB")
+        }
+        break;
+        
+        case AST_NODE_OPERATION_MUL:
+        {
+            handleArithemticOp("MUL")
+        }
+        break;
 
-            char varName[256]={0};
-            varName[0]='t';
-
-            size_t tempIdx=++creationIdx;
-
-            for(size_t i=1;i<256;++i)
-            {
-                if(!tempIdx)
-                {
-                    break;
-                }
-                varName[i]=numToHex[tempIdx&0xf];
-
-                tempIdx>>=4;
-            }
-
-            InterLangVar tempForConstantVar[2]={0};
-            
-            if(!vars[0])
-            {
-                if(tree->expressionNode.left->e!=AST_NODE_CONSTANT)
-                {
-                    return NULL;
-                }
-
-                tempForConstantVar[0].e=getTypeOfConstantNodeLexToken(tree->expressionNode.left->constantNode.token);
-                tempForConstantVar[0].nameToken=tree->expressionNode.left->constantNode.token;
-
-                vars[0]=tempForConstantVar+0;
-            }
-
-            if(!vars[1])
-            {
-                if(tree->expressionNode.right->e!=AST_NODE_CONSTANT)
-                {
-                    return NULL;
-                }
-
-                tempForConstantVar[1].e=getTypeOfConstantNodeLexToken(tree->expressionNode.right->constantNode.token);
-                tempForConstantVar[1].nameToken=tree->expressionNode.right->constantNode.token;
-
-
-                vars[1]=tempForConstantVar+1;
-            }
-
-
-            InterLangVar resultVar={
-                .e=vars[0]->e,
-                .nameStr=strdup(varName),
-                .pointToStr=true
-            };
-
-            pushToScope(scope,&resultVar,outputFile);
-
-            fputs("ADD_",outputFile);
-
-            
-
-
-            fputs(typeNames[vars[0]->e],outputFile);
-
-            fputs("(",outputFile);
-            fputs(resultVar.nameStr,outputFile);
-
-            fputs(",",outputFile);
-
-
-            
-            fputInterLangVar(vars[0],outputFile);
-            fputs(",",outputFile);
-            fputInterLangVar(vars[1],outputFile);
-            fputs(")\n",outputFile);
-
-            
-
-            return &listEnd(*scope);
+        case AST_NODE_OPERATION_DIV:
+        {
+            handleArithemticOp("DIV")
         }
         break;
     }
 
+    #undef handleArithemticOp
     #undef getVarsExpr
 }
 

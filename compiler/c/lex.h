@@ -91,7 +91,7 @@ static bool isLexTokenEqualToStr(const LexToken *token,char *str)
     return true;
 }
 
-static bool isLexTokenEqual(LexToken *a,LexToken *b)
+static bool isLexTokenEqual(const LexToken *a,const LexToken *b)
 {
     if(a->e!=b->e)
     {
