@@ -31,6 +31,7 @@ size_t preprocess(char *str,size_t strSize);
     X(LEX_TOKEN_RETURN)\
     X(LEX_TOKEN_AS)\
     X(LEX_TOKEN_STRUCT)\
+    X(LEX_TOKEN_MODIFIER)\
 
 
 typedef enum LexTokenEnum
@@ -146,6 +147,7 @@ static void printLexToken(FILE *file,const LexToken *token)
     X("return")\
     X("as")\
     X("struct")\
+    X("modifier")
 
 
 // Assume str is null-terminated

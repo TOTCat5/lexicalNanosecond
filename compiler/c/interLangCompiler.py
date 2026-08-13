@@ -33,20 +33,38 @@ typeToSize={
     "UINT16":2
 }
 
-#              varName, stackPtr, size
-pushList:list[(str,     int,      int)]=[]
+#              varName, stackPtr, size, funcArg
+pushList:list[(str,     int,      int,  bool   )]=[]
+endFuncArgIdx:int=0 
+
+PUSH_LIST_VAR_NAME=0
+PUSH_LIST_STACK_PTR=1
+PUSH_LIST_SIZE=2
+PUSH_LIST_FUNC_ARG=3
 
 def pushVar(varName:str,typeName:str):
     stackPtr:int=0
+    if len(pushList)!=0 and (not pushList[-1][PUSH_LIST_FUNC_ARG]):
+        stackPtr=pushList[-1][PUSH_LIST_STACK_PTR]+pushList[-1][PUSH_LIST_SIZE]
+
+    pushList.append((varName,stackPtr,typeToSize[typeName],False))
+
+def pushFuncArg(argName:str,typeName:str):
+    stackPtr:int=0
     if len(pushList)!=0:
-        stackPtr=pushList[-1][1]+pushList[-1][2]
+        stackPtr=pushList[-1][PUSH_LIST_STACK_PTR]+pushList[-1][PUSH_LIST_SIZE]
 
-    pushList.append((varName,stackPtr,typeToSize[typeName]))
+    pushList.append((argName,stackPtr,typeToSize[typeName],True))
+    endFuncArgIdx=len(pushList)
+    
 
-def getVarSubtract(varName:str)->int:
+def getVarSubStr(varName:str)->str:
     for i in reversed(pushList):
-        if varName==i[0]:
-            return (pushList[-1][1]+pushList[-1][2])-i[1]
+        if varName==i[PUSH_LIST_VAR_NAME]:
+            if i[PUSH_LIST_FUNC_ARG]:
+                return "[ebp+"+str(4+i[PUSH_LIST_STACK_PTR]-pushList[endFuncArgIdx][PUSH_LIST_STACK_PTR]+i[PUSH_LIST_SIZE])+"]"
+            else:
+                return "[ebp-"+str(i[PUSH_LIST_STACK_PTR]-pushList[endFuncArgIdx][PUSH_LIST_STACK_PTR])+"]"
 
     print("error unknown variable: "+varName)
 
@@ -67,13 +85,14 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             outFile.write("sub esp,"+str(typeToSize[typeName])+"\n")
 
         def assignCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==2)
             outFile.write("mov ")
             if commandArgs[0]=="returnValue":
-                outFile.write(registers["eax"][typeName]+", [esp+"+str(getVarSubtract(commandArgs[1]))+"]")
+                outFile.write(registers["eax"][typeName]+", "+getVarSubStr(commandArgs[1]))
             else:
                 tempReg=registers["ebx"][typeName]
-                outFile.write(tempReg+", [esp"+str(getVarSubtract(commandArgs[1]))+"]")
-                outFile.write("[esp"+str(getVarSubtract(commandArgs[1]))+"], "+tempReg)
+                outFile.write(tempReg+", "+getVarSubStr(commandArgs[1])+"\n")
+                outFile.write(      "mov "+getVarSubStr(commandArgs[0])+", "+tempReg)
 
 
             outFile.write("\n")
@@ -81,11 +100,13 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
 
         def addCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==3)
+
             if commandArgs[0]==commandArgs[1]:
                 tempReg=registers["ebx"][typeName]
                 result:str=(
-                    "mov "+tempReg+",[esp+"+str(getVarSubtract(commandArgs[0]))+"]\n"+
-                    "add"+tempReg+ ",[esp+"+str(getVarSubtract(commandArgs[2]))+"]\n"
+                    "mov "+tempReg+","+getVarSubStr(commandArgs[0])+"\n"+
+                    "add"+tempReg+ ","+getVarSubStr(commandArgs[2])+"\n"
                 )
 
                 print(result)
@@ -98,23 +119,54 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             tempReg1=registers["ecx"][typeName]
 
             result:str=(
-                "mov "+tempReg0+",[esp+"+str(getVarSubtract(commandArgs[1]))+"]\n"
-                "mov "+tempReg1+",[esp+"+str(getVarSubtract(commandArgs[2]))+"]\n"
-                "add "+tempReg0+","+tempReg1+"\n"
-                "mov [esp+"+str(getVarSubtract(commandArgs[0]))+"],"+tempReg0+"\n"
+                "mov "+tempReg0+", "+getVarSubStr(commandArgs[1])+"\n"
+                "mov "+tempReg1+", "+getVarSubStr(commandArgs[2])+"\n"
+                "add "+tempReg0+", "+tempReg1+"\n"
+                "mov "+getVarSubStr(commandArgs[0])+", "+tempReg0+"\n"
             )
 
             print(result)
 
             outFile.write(result)
 
+        def subCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==3)
+            if commandArgs[0]==commandArgs[1]:
+                tempReg=registers["ebx"][typeName]
+                result:str=(
+                    "mov "+tempReg+","+getVarSubStr(commandArgs[0])+"\n"+
+                    "sub"+tempReg+ ","+getVarSubStr(commandArgs[2])+"\n"
+                )
+
+                print(result)
+                                
+                outFile.write(result)
+
+                return
+
+            tempReg0=registers["ebx"][typeName]
+            tempReg1=registers["ecx"][typeName]
+
+            result:str=(
+                "mov "+tempReg0+","+getVarSubStr(commandArgs[1])+"\n"
+                "mov "+tempReg1+","+getVarSubStr(commandArgs[2])+"\n"
+                "sub "+tempReg0+","+tempReg1+"\n"
+                "mov "+getVarSubStr(commandArgs[0])+","+tempReg0+"\n"
+            )
+
+            print(result)
+
+            outFile.write(result)
+            
         def popCommand(commandArgs:list[str],typeName:str):
+            # pass
             assert(len(commandArgs)==1)
 
             assert(pushList[-1][0]==commandArgs[0])
 
-            outFile.write("add esp,"+str(pushList[-1][2])+"\n")
+            # outFile.write("add esp,"+str(pushList[-1][PUSH_LIST_SIZE])+"\n")
             pushList.pop()
+            # possibly removeable since "mov esp, ebp" should be resetting anything esp left
 
 
             
@@ -125,6 +177,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             (pushCommand,   "PUSH"),
             (assignCommand, "ASSIGN"),
             (addCommand,    "ADD"),
+            (subCommand,    "SUB"),
             (popCommand,    "POP")
         ]
 
@@ -152,13 +205,13 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
                     argName:str=funcArgs[i*2+1]
 
-                    pushVar(argName,funcArgs[i*2])
+                    pushFuncArg(argName,funcArgs[i*2])
 
                     funcContext.append(argName)
 
                     i+=1
 
-                print(funcArgs)
+                print(funcContext)
 
                 outFile.write("push ebp\nmov ebp,esp\n")
 
@@ -190,15 +243,23 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
 
             if test[0]=="RETURN_FUNC":
-                assert(funcContext[-1]==pushList[-1][0])
-
+                
                 outFile.write("mov esp,ebp\npop ebp\nret\n")
+
+
+                
 
                 continue
 
 
 
             if test[0]=="END_FUNC":
+                # remove func args in pushList
+                for i in range(len(funcContext)):
+                    pushList.pop()
+
+
+                funcContext.clear()
                 continue
 
 

@@ -1,1 +1,3 @@
-add(a:int32,b:int32):int32=a+b;
+addition(a:int32,b:int32):int32=a+b;
+
+substaction(a:int32,b:int32):int32=a-b;

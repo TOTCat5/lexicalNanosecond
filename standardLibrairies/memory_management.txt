@@ -1,0 +1,14 @@
+
+modifier(type) struct ptr
+{
+    index:uint32;
+}
+
+modifier(type) getAddr(object:type):ptr(type);
+
+modifier(type) alloc(size:int):ptr(type);
+
+modifier(type) free(p:ptr(type)):void;
+
+
+

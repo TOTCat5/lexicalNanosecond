@@ -1,4 +1,4 @@
-
+from memory_management import ptr;
 
 struct VGA_ScreenCharacter
 {
@@ -13,14 +13,13 @@ putChar(t:char):void
 {
     if([str]==10)
     {
-        cursorPtr/=80;
-        cursorPtr*=80;
+        \\ round it down
+        cursorPtr=(cursorPtr/80)*80;
     }
     if([str]==13)
     {
-        cursorPtr+=79;
-        cursorPtr/=80;
-        cursorPtr*=80;
+        \\ inverse,round it up
+        cursorPtr=((cursorPtr+79)/80)*80;
     }
     [cursorPtr].c=[str];
     [cursorPtr].color=0x0f;
