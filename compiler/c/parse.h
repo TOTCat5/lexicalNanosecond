@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lex.h"
+#include "parseEnclosure.h"
 
 
 #define AST_NODE_ENUM\
@@ -204,6 +204,6 @@ static size_t enclosureCheck(char ponctuation)
     return 0;
 }
 
-#define parseFuncArgs const LexToken *tokens,const size_t tokenCount,arenaType(AST_Node) arena
+#define parseFuncArgs EnclosureTreeNode *node,size_t listLength,arenaType(AST_Node) arena
 
 bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **start);

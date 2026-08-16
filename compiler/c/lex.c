@@ -276,7 +276,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
 
         // If i get to reach this one I swear to god I delete this project
         size_t foundIdx=checkForPonctuationToken(str[i]);
-        if(foundIdx!=NO_TOKEN)
+        if(foundIdx!=FINDING_ERROR_VALUE)
         {
             if(startStrI!=i-1)
             {

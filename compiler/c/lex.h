@@ -134,7 +134,7 @@ static void printLexToken(FILE *file,const LexToken *token)
 
 
 
-#define NO_TOKEN SIZE_MAX
+#define FINDING_ERROR_VALUE SIZE_MAX
 
 #define KEYWORDS_LIST\
     X("import")\

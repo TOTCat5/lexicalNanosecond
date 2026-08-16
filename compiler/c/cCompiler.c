@@ -5,7 +5,44 @@
 
 
 
-#define printTreeExpr for(size_t depthIdx=0;depthIdx<depth;++depthIdx){printf("     ");}
+#define printTreeExpr for(int depthIdx=0;depthIdx<depth;++depthIdx){printf("     ");}
+
+
+void printEnclosureTree(EnclosureTreeNode *node)
+{
+    static int depth=0;
+
+    
+    char errorCheck=node->enclosurePonc;
+    printTreeExpr
+    printf("%c\n",errorCheck);
+    depth++;
+    for(size_t i=0;i<listLength(node->list);++i)
+    {
+
+        EnclosureTreeToken token=node->list[i];
+
+        
+        
+        if(node->list[i].isNewEnclosure)
+        {
+            
+            depth++;
+            printEnclosureTree(&(node->list[i].node));
+            depth--;
+            
+        }
+        else
+        {
+            printTreeExpr
+            printLexToken(stdout,node->list[i].token);
+            printf("\n");
+        }
+    
+    }
+
+    depth--;
+}
 
 void printTree(AST_Node *node)
 {
@@ -321,6 +358,7 @@ void printTree(AST_Node *node)
 }
 
 
+
 void cleanUpTree()
 {
     
@@ -379,18 +417,23 @@ void compile(char *str,size_t strSize,FILE *outFile)
     }
     printf("\b \n}\n");
 
-    arenaType(void) parseTreeArena;
-    arenaCreate(parseTreeArena,1ull<<15);
 
-    AST_Node *treeRoot=NULL;
-    parse(tokens,parseTreeArena,&treeRoot);
+    getEnclosureResult result=getEnclosures(tokens,'\0',0,listLength(tokens));
 
-    printTree(treeRoot);
+    printEnclosureTree(&result.list);
 
-    if(!isCodeValid(treeRoot))
-    {
-        exit(EXIT_FAILURE);
-    }
+    // arenaType(void) parseTreeArena;
+    // arenaCreate(parseTreeArena,1ull<<15);
+
+    // AST_Node *treeRoot=NULL;
+    // parse(tokens,parseTreeArena,&treeRoot);
+
+    // printTree(treeRoot);
+
+    // if(!isCodeValid(treeRoot))
+    // {
+    //     exit(EXIT_FAILURE);
+    // }
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 

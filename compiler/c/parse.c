@@ -1,6 +1,8 @@
 #include "parse.h"
 
 
+
+
 AST_Node *parseExpr(parseFuncArgs);
 AST_Node *parseType(parseFuncArgs);
 AST_Node *parseList(parseFuncArgs);
@@ -14,85 +16,93 @@ AST_Node *parseFunc(parseFuncArgs);
 
 AST_Node *parseType(parseFuncArgs)
 {
-    if(tokenCount==1)
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
+    if(
+        (nodeListLength==1)&&
+        !node->list[0].isNewEnclosure
+    )
     {
         AST_Node *result=arenaAlloc(arena,sizeOfNode(typeNode));
         result->e=AST_NODE_TYPE;
 
-        result->typeNode.token=tokens;
+        result->typeNode.token=node->list[0].token;
 
         return result;
     }
-    if(tokenCount<3)
+    
+    if(nodeListLength>3)
     {
         return NULL;
     }
+    
 
-    if(isTokenPonc(tokens[tokenCount-1],']'))
+    if(hasEnclosureOfPonc(listEnd(node->list),'['))
     {
         AST_Node *result=arenaAlloc(arena,sizeOfNode(precisionNode));
         result->e=AST_NODE_PRECISION;
 
-        size_t startPrecisionCheck=0;
-        {
-            size_t enclosureCount=0;
-            for(size_t i=0;i<tokenCount;++i)
-            {
-                if(tokens[i].e==LEX_TOKEN_PONCTUATION)
-                {
-                    char ponc=tokens[i].ponctuation;
-                    enclosureCount+=enclosureCheck(ponc);
-                    if(
-                        ponc=='['&&
-                        enclosureCount==1
-                    )
-                    {
-                        startPrecisionCheck=i;
-                        break;
-                    }
-                }
-            }
-        }
+        result->precisionNode.typeNode=parseType(
+            node,
+            nodeListLength-1,
+            arena
+        );
+        result->precisionNode.expr=parseExpr(
+            &listEnd(node->list),
+            0,
+            arena
+        );
 
-        result->precisionNode.typeNode=parseType(tokens,startPrecisionCheck,arena);
 
-        result->precisionNode.expr=parseExpr(tokens+startPrecisionCheck+1,tokenCount-startPrecisionCheck-2,arena);
 
         return result;
     }
 
-    AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierNode));
+    AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierTypeNode));
     result->e=AST_NODE_MODIFIER_TYPE;
-    result->modifierTypeNode.modifierToken=tokens;
-    result->modifierTypeNode.typeNode=parseType(tokens+2,tokenCount-3,arena);
+
+    result->modifierTypeNode.modifierToken=node->list[0].token;
+    result->modifierTypeNode.typeNode=parseType(&(node->list[1].node),0,arena);
 
     return result;
 }
 
 AST_Node *parseExpr(parseFuncArgs)
 {
-    if(tokenCount==0)
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
+    if(nodeListLength==0)
     {
         return NULL;
     }
 
-    if(tokenCount==1)
+    if(nodeListLength==1)
     {
-        if(tokens[0].e==LEX_TOKEN_ID)
+        const LexToken *token=node->list[0].token;
+
+        if(token->e==LEX_TOKEN_ID)
         {
             AST_Node *result=arenaAlloc(arena,sizeOfNode(varNode));
             result->e=AST_NODE_VAR;
 
-            result->varNode.token=tokens;
+            result->varNode.token=token;
 
             return result;
         }
-        else if(tokens[0].e==LEX_TOKEN_CONSTANT)
+        else if(token->e==LEX_TOKEN_CONSTANT)
         {
             AST_Node *result=arenaAlloc(arena,sizeOfNode(constantNode));
             result->e=AST_NODE_CONSTANT;
 
-            result->constantNode.token=tokens;
+            result->constantNode.token=token;
 
             return result;
         }
@@ -222,6 +232,12 @@ AST_Node *parseExpr(parseFuncArgs)
 }
 AST_Node *parseStatement(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     if(tokenCount==0)
     {
         return NULL;
@@ -290,6 +306,12 @@ AST_Node *parseStatement(parseFuncArgs)
 
 AST_Node *parseStatementList(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     size_t enclosureCount=0;
     for(size_t i=0;i<tokenCount;++i)
     {
@@ -322,6 +344,12 @@ AST_Node *parseStatementList(parseFuncArgs)
 // kind of a stretch to use "line" but who gives a shit
 AST_Node *parseFileLine(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     if(
         tokens[0].e==LEX_TOKEN_STRUCT&&
         tokens[1].e==LEX_TOKEN_ID&&
@@ -366,6 +394,12 @@ AST_Node *parseFileLine(parseFuncArgs)
 
 AST_Node *parseFile(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     size_t enclosureCount=0;
     for(size_t i=0;i<tokenCount;++i)
     {
@@ -413,6 +447,12 @@ AST_Node *parseFile(parseFuncArgs)
 
 AST_Node *parseList(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     if(tokenCount==0)
     {
         return NULL;
@@ -453,6 +493,12 @@ AST_Node *parseList(parseFuncArgs)
 
 AST_Node *parseFunc(parseFuncArgs)
 {
+    size_t nodeListLength=listLength(node->list);
+    if(listLength)
+    {
+        nodeListLength=listLength;
+    }
+
     AST_Node *result=arenaAlloc(arena,sizeOfNode(defFuncNode));
     result->e=AST_NODE_DEF_FUNC;
 
