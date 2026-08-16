@@ -1,0 +1,11 @@
+
+struct test
+{
+    field0:int32;
+    field1:bool;
+}
+
+\\ func to check if the rest works
+
+main():int32=1;
+

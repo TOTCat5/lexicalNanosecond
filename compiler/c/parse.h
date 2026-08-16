@@ -14,9 +14,12 @@
     X(AST_NODE_CALLING_FUNC)\
     X(AST_NODE_CONSTANT)\
     X(AST_NODE_VAR)\
-    X(AST_NODE_MODIFIER)\
+    X(AST_NODE_MODIFIER_TYPE)\
     X(AST_NODE_TYPE)\
     X(AST_NODE_PRECISION)\
+    X(AST_NODE_STRUCT)\
+    X(AST_NODE_MODIFIER)\
+    
 
 
 typedef enum AST_NodeEnum
@@ -150,7 +153,7 @@ struct AST_Node
             const LexToken *modifierToken;
 
             AST_Node *typeNode;
-        } modifierNode;
+        } modifierTypeNode;
 
         struct
         {
@@ -163,6 +166,19 @@ struct AST_Node
 
             AST_Node *expr;
         } precisionNode;
+
+        struct
+        {
+            const LexToken *nameToken;
+            // is a statementList and not a valueList
+            AST_Node *fieldList;
+        } structNode;
+
+        struct
+        {
+            const LexToken *typeWritten;
+            AST_Node *code;
+        } modifierNode;
     };
 };
 

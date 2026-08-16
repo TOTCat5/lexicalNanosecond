@@ -236,22 +236,22 @@ void printTree(AST_Node *node)
             depth--;
         break;
 
-        case AST_NODE_MODIFIER:
+        case AST_NODE_MODIFIER_TYPE:
             printTreeExpr
-            printf("modifier:\n");
+            printf("modifierType:\n");
             
             depth++;
 
             printTreeExpr
             printf("modifierToken:\"");
 
-            printLexToken(stdout,node->modifierNode.modifierToken);
+            printLexToken(stdout,node->modifierTypeNode.modifierToken);
             printf("\"\n");
 
             printTreeExpr
             printf("typeNode:\n");
             depth++;
-            printTree(node->modifierNode.typeNode);
+            printTree(node->modifierTypeNode.typeNode);
             depth--;
 
 
@@ -290,6 +290,22 @@ void printTree(AST_Node *node)
             printf("expr:\n");
             depth++;
             printTree(node->precisionNode.expr);
+            depth--;
+
+            depth--;
+        break;
+
+        case AST_NODE_STRUCT:
+            printTreeExpr
+            printf("struct\n");
+
+            depth++;
+            
+            printTreeExpr
+            printf("fieldList:\n");
+            
+            depth++;
+            printTree(node->structNode.fieldList);
             depth--;
 
             depth--;
@@ -378,7 +394,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
-    generateInterLangCode(treeRoot,outFile);
+    // generateInterLangCode(treeRoot,outFile);
 
     // generateAssembly(outFile,treeRoot);
 
@@ -395,7 +411,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.intLang","wb");
 
 
-    FILE *inFile=fopen("tests/argumentToInterLang.ln","rb");
+    FILE *inFile=fopen("tests/structCreationTest.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

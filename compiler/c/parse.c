@@ -62,9 +62,9 @@ AST_Node *parseType(parseFuncArgs)
     }
 
     AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierNode));
-    result->e=AST_NODE_MODIFIER;
-    result->modifierNode.modifierToken=tokens;
-    result->modifierNode.typeNode=parseType(tokens+2,tokenCount-3,arena);
+    result->e=AST_NODE_MODIFIER_TYPE;
+    result->modifierTypeNode.modifierToken=tokens;
+    result->modifierTypeNode.typeNode=parseType(tokens+2,tokenCount-3,arena);
 
     return result;
 }
@@ -276,6 +276,15 @@ AST_Node *parseStatement(parseFuncArgs)
         // }
     }
 
+    if(isTokenPonc(tokens[tokenCount-1],';'))
+    {
+        return parseExpr(tokens,tokenCount-1,arena);
+    }
+    else
+    {
+        return parseExpr(tokens,tokenCount,arena);
+    }
+
     return parseExpr(tokens,tokenCount,arena);
 }
 
@@ -310,12 +319,47 @@ AST_Node *parseStatementList(parseFuncArgs)
     return parseStatement(tokens,tokenCount,arena);
 }
 
+// kind of a stretch to use "line" but who gives a shit
 AST_Node *parseFileLine(parseFuncArgs)
 {
+    if(
+        tokens[0].e==LEX_TOKEN_STRUCT&&
+        tokens[1].e==LEX_TOKEN_ID&&
+        isTokenPonc(tokens[2],'{')&&
+        isTokenPonc(tokens[tokenCount-1],'}')
+    )
+    {
+        AST_Node *result=arenaAlloc(arena,sizeOfNode(structNode));
+        result->e=AST_NODE_STRUCT;
+
+        result->structNode.nameToken=tokens+1;
+        result->structNode.fieldList=parseStatementList(tokens+3,tokenCount-4,arena);
+
+        return result;
+    }
+
+    if(
+        tokens[0].e==LEX_TOKEN_MODIFIER
+    )
+    {
+        AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierNode));
+        result->e=AST_NODE_MODIFIER;
+        
+        result->modifierNode.typeWritten=tokens+2;
+
+        // assuke only one type for a modifier so bad if i plan to add more types to modifier 
+        result->modifierNode.code=parseFileLine(tokens+4,tokenCount-4,arena);
+
+        return result;
+    }
+
+
+
     if(tokens[0].e==LEX_TOKEN_ID&&isTokenPonc(tokens[1],'('))
     {
         return parseFunc(tokens,tokenCount,arena);
     }
+
 
     return parseExpr(tokens,tokenCount,arena);
 }
