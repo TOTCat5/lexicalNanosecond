@@ -186,24 +186,7 @@ struct AST_Node
 #define sizeOfNode(nodeName) (offsetof(AST_Node,statementListNode)+sizeof(((AST_Node){0}). nodeName))
 
 
-static size_t enclosureCheck(char ponctuation)
-{
-    switch(ponctuation)
-    {
-        case '{':
-        case '[':
-        case '(':
-            return 1;
 
-        case '}':
-        case ']':
-        case ')':
-            return SIZE_MAX;
-    }
-
-    return 0;
-}
-
-#define parseFuncArgs EnclosureTreeNode *node,size_t listLength,arenaType(AST_Node) arena
+#define parseFuncArgs EnclosureTreeNode *node,size_t listLength,size_t startI,arenaType(AST_Node) arena
 
 bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **start);

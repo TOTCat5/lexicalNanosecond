@@ -5,7 +5,7 @@ Path to Success:
 - implement structures in InterLang:
     - add way to create structures in InterLang (may need to rename `DEF` to `DEFFUNC`)
     - add ways to interact with those structures
-    - implem,ent in `interLang.c`
+    - implement in `interLang.c`
 - support "if","while":
     - add branching in InterLang
 - add non linear asm generation in `InterLangCompiler.py`

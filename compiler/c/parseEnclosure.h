@@ -29,6 +29,18 @@ struct EnclosureTreeToken
 
 #define hasEnclosureOfPonc(token,ponc) (token.isNewEnclosure&&ponc==token.node.enclosurePonc)
 
+static const LexToken *getEnclosureTokenFunc(EnclosureTreeToken *token,size_t line,const char *fileName,const char *content)
+{
+    if(token->isNewEnclosure)
+    {
+        // do big error bad boo ah bleurgh
+
+        return NULL;
+    }
+}
+
+#define getEnclosureToken(token) (getEnclosureTokenFunc((token),__LINE__,__FILE__,#token))
+
 typedef struct getEnclosureResult
 {
     EnclosureTreeNode list;

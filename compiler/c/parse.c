@@ -49,11 +49,13 @@ AST_Node *parseType(parseFuncArgs)
         result->precisionNode.typeNode=parseType(
             node,
             nodeListLength-1,
+            startI,
             arena
         );
         result->precisionNode.expr=parseExpr(
             &listEnd(node->list),
             0,
+            startI,
             arena
         );
 
@@ -65,18 +67,18 @@ AST_Node *parseType(parseFuncArgs)
     AST_Node *result=arenaAlloc(arena,sizeOfNode(modifierTypeNode));
     result->e=AST_NODE_MODIFIER_TYPE;
 
-    result->modifierTypeNode.modifierToken=node->list[0].token;
-    result->modifierTypeNode.typeNode=parseType(&(node->list[1].node),0,arena);
+    result->modifierTypeNode.modifierToken=node->list[startI].token;
+    result->modifierTypeNode.typeNode=parseType(&(node->list[1].node),nodeListLength-1,startI+1,arena);
 
     return result;
 }
 
 AST_Node *parseExpr(parseFuncArgs)
 {
-    size_t nodeListLength=listLength(node->list);
-    if(listLength)
+    size_t nodeListLength=listLength;
+    if(!listLength)
     {
-        nodeListLength=listLength;
+        nodeListLength=listLength(node->list);
     }
 
     if(nodeListLength==0)
@@ -86,7 +88,7 @@ AST_Node *parseExpr(parseFuncArgs)
 
     if(nodeListLength==1)
     {
-        const LexToken *token=node->list[0].token;
+        const LexToken *token=node->list[startI].token;
 
         if(token->e==LEX_TOKEN_ID)
         {
@@ -111,54 +113,84 @@ AST_Node *parseExpr(parseFuncArgs)
     }
 
     {
-        size_t enclosureCount=0;
-        for(size_t i=tokenCount;i!=0;--i)
+        for(size_t i=nodeListLength+startI;i!=startI;++i)
         {
-            if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)
+            if(getEnclosureToken(node->list+i)->e==LEX_TOKEN_PONCTUATION)
             {
-                const char ponc=tokens[i-1].ponctuation;
-                enclosureCount+=enclosureCheck(ponc);
-                if(ponc=='='&&enclosureCount==0)
+                const char ponc=getEnclosureToken(node->list+i-1)->ponctuation;
+                if(ponc=='=')
                 {
                     AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
                     result->e=AST_NODE_ASSIGNEMENT;
 
-                    result->assignementNode.leftExpr=parseExpr(tokens,i-1,arena);
-                    result->assignementNode.rightExpr=parseExpr(tokens+i,tokenCount-i,arena);
+                    result->assignementNode.leftExpr=parseExpr(node,i-1,0,arena);
+                    result->assignementNode.rightExpr=parseExpr(node,i,i,arena);
                     return result;
+        
                 }
             }
         }
+
+        // size_t enclosureCount=0;
+        // for(size_t i=tokenCount;i!=0;--i)
+        // {
+        //     if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)
+        //     {
+        //         const char ponc=tokens[i-1].ponctuation;
+        //         enclosureCount+=enclosureCheck(ponc);
+        //         if(ponc=='='&&enclosureCount==0)
+        //         {
+        //             AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
+        //             result->e=AST_NODE_ASSIGNEMENT;
+
+        //             result->assignementNode.leftExpr=parseExpr(tokens,i-1,arena);
+        //             result->assignementNode.rightExpr=parseExpr(tokens+i,tokenCount-i,arena);
+        //             return result;
+        //         }
+        //     }
+        // }
     }
 
-    if(tokens[0].e==LEX_TOKEN_ID&&isTokenPonc(tokens[1],':'))
+    if(getEnclosureToken(node->list+startI+1)->e==LEX_TOKEN_ID&&isTokenPonc(*getEnclosureToken(node->list+startI+1),':'))
     {
         AST_Node *result=arenaAlloc(arena,sizeOfNode(decVarNode));
         result->e=AST_NODE_DEC_VAR;
 
-        result->decVarNode.nameToken=tokens;
-        result->decVarNode.typeNode=parseType(tokens+2,tokenCount-2,arena);
+        result->decVarNode.nameToken=getEnclosureToken(node->list);
+        result->decVarNode.typeNode=parseType(node->list,nodeListLength-2,2,arena);
 
         return result;
     }
 
     #define checkOperation(ponctu,oper)\
     {\
-        size_t enclosureCount=0;\
-        for(size_t i=tokenCount;i!=0;--i)\
+        for(size_t i=nodeListLength+startI;i!=startI;--i)\
         {\
-            if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)\
+            if(getEnclosureToken(node->list+i-1)->e==LEX_TOKEN_PONCTUATION)\
             {\
-                const char ponc=tokens[i-1].ponctuation;\
-                enclosureCount+=enclosureCheck(ponc);\
-                if(ponc==ponctu&&enclosureCount==0)\
+                const char ponc=node->list[i-1].token->ponctuation;\
+                if(ponc==ponctu)\
                 {\
                     AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));\
                     result->e=AST_NODE_EXPRESSION;\
 \
                     result->expressionNode.op=AST_NODE_OPERATION_##oper;\
-                    result->expressionNode.left=parseExpr(tokens,i-1,arena);\
-                    result->expressionNode.right=parseExpr(tokens+i,tokenCount-i,arena);\
+                    if(i==1&&hasEnclosureOfPonc(node->list[0],'('))\
+                    {\
+                        result->expressionNode.left=parseExpr(node->list,0,0,arena);\
+                    }\
+                    else\
+                    {\
+                        result->expressionNode.left=parseExpr(node,i-1,startI,arena);\
+                    }\
+                    if(i==3&&hasEnclosureOfPonc(node->list[i-1],'('))\
+                    {\
+                        result->expressionNode.right=parseExpr(node->list+i-1,0,0,arena);\
+                    }\
+                    else\
+                    {\
+                        result->expressionNode.right=parseExpr(node,i-1-startI,i,arena);\
+                    }\
                     return result;\
                 }\
             }\
@@ -167,31 +199,53 @@ AST_Node *parseExpr(parseFuncArgs)
 
     checkOperation('+',ADD)
     // have to.to handle neg
+    for(size_t i=nodeListLength+startI;i!=startI;--i)\
     {
-        size_t enclosureCount=0;
-        for(size_t i=tokenCount;i!=0;--i)
+        if(getEnclosureToken(node->list+i-1)->e==LEX_TOKEN_PONCTUATION)
         {
-            if(tokens[i-1].e==LEX_TOKEN_PONCTUATION)
+            const char ponc=node->list[i-1].token->ponctuation;
+            if(ponc=='-')
             {
-                const char ponc=tokens[i-1].ponctuation;
-                enclosureCount+=enclosureCheck(ponc);
-                if(ponc=='-'&&enclosureCount==0)
+                AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));
+                result->e=AST_NODE_EXPRESSION;
+                if(i==1)
                 {
-                    AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));
-                    result->e=AST_NODE_EXPRESSION;
-                    if(i==1)
-                    {
-                        result->expressionNode.op=AST_NODE_OPERATION_NEG;
-                        result->expressionNode.left=NULL;
-                        result->expressionNode.right=parseExpr(tokens+i,tokenCount-1,arena);
+                    result->expressionNode.op=AST_NODE_OPERATION_NEG;
+                    result->expressionNode.left=NULL;
 
-                        return result;
+                    if(i==3&&hasEnclosureOfPonc(node->list[i-1],'('))
+                    {
+                        result->expressionNode.right=parseExpr(node->list+i-1,0,0,arena);
                     }
-                    result->expressionNode.op=AST_NODE_OPERATION_SUB;
-                    result->expressionNode.left=parseExpr(tokens,i-1,arena);
-                    result->expressionNode.right=parseExpr(tokens+i,tokenCount-i,arena);
+                    else
+                    {
+                        result->expressionNode.right=parseExpr(node,i-1-startI,i,arena);
+                    }
+                    
+
                     return result;
                 }
+                result->expressionNode.op=AST_NODE_OPERATION_SUB;
+
+                if(i==2&&hasEnclosureOfPonc(node->list[0],'('))
+                {
+                    result->expressionNode.left=parseExpr(node->list+i-1,0,0,arena);
+                }
+                else
+                {
+                    result->expressionNode.left=parseExpr(node,i-1-startI,i,arena);
+                }
+                
+                if(i==2&&hasEnclosureOfPonc(node->list[i-1],'('))
+                {
+                    result->expressionNode.right=parseExpr(node->list+i-1,0,0,arena);
+                }
+                else
+                {
+                    result->expressionNode.right=parseExpr(node,i-1-startI,i,arena);
+                }
+            
+                return result;
             }
         }
     }
@@ -203,25 +257,22 @@ AST_Node *parseExpr(parseFuncArgs)
     #undef checkOperation
 
 
-    if(tokens[0].e==LEX_TOKEN_ID)
+    if(getEnclosureToken(node->list+startI)->e==LEX_TOKEN_ID)
     {
-        if(isTokenPonc(tokens[1],'('))
+        if(hasEnclosureOfPonc(node->list[startI+1],'('))
         {
             //TODO check for unended enclosures
 
-            if(isTokenPonc(tokens[tokenCount-1],')'))
-            {
-                // reminder: function needs to be treated as pointers to the code though the assembly should keep them as labels
-                AST_Node *result=arenaAlloc(arena,sizeOfNode(callingFuncNode));
-            
-                result->e=AST_NODE_CALLING_FUNC;
+            // reminder: function needs to be treated as pointers to the code though the assembly should keep them as labels
+            AST_Node *result=arenaAlloc(arena,sizeOfNode(callingFuncNode));
+        
+            result->e=AST_NODE_CALLING_FUNC;
 
-                result->callingFuncNode.func=parseExpr(tokens,1,arena);
+            result->callingFuncNode.func=parseExpr(node,1,startI,arena);
 
-                result->callingFuncNode.args=parseList(tokens+2,tokenCount-2,arena);
+            result->callingFuncNode.args=parseList(&(node->list[startI+1].node),0,0,arena);
 
-                return result;
-            }
+            return result;
         }
     }
 
@@ -238,12 +289,12 @@ AST_Node *parseStatement(parseFuncArgs)
         nodeListLength=listLength;
     }
 
-    if(tokenCount==0)
+    if(nodeListLength==0)
     {
         return NULL;
     }
 
-    if(tokens[0].e==LEX_TOKEN_RETURN)
+    if(node->list[0].token->e==LEX_TOKEN_RETURN)
     {
         AST_Node *result=arenaAlloc(arena,sizeOfNode(returnNode));
         result->e=AST_NODE_RETURN;
