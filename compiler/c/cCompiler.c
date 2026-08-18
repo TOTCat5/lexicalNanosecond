@@ -422,13 +422,13 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     printEnclosureTree(&result.list);
 
-    // arenaType(void) parseTreeArena;
-    // arenaCreate(parseTreeArena,1ull<<15);
+    arenaType(void) parseTreeArena;
+    arenaCreate(parseTreeArena,1ull<<15);
 
-    // AST_Node *treeRoot=NULL;
-    // parse(tokens,parseTreeArena,&treeRoot);
+    AST_Node *treeRoot=NULL;
+    parse(&result.list,parseTreeArena,&treeRoot);
 
-    // printTree(treeRoot);
+    printTree(treeRoot);
 
     // if(!isCodeValid(treeRoot))
     // {

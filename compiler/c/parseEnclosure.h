@@ -37,6 +37,8 @@ static const LexToken *getEnclosureTokenFunc(EnclosureTreeToken *token,size_t li
 
         return NULL;
     }
+
+    return token->token;
 }
 
 #define getEnclosureToken(token) (getEnclosureTokenFunc((token),__LINE__,__FILE__,#token))

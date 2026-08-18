@@ -187,6 +187,6 @@ struct AST_Node
 
 
 
-#define parseFuncArgs EnclosureTreeNode *node,size_t listLength,size_t startI,arenaType(AST_Node) arena
+#define parseFuncArgs EnclosureTreeToken *tokens,size_t listLength,arenaType(AST_Node) arena
 
-bool parse(listType(LexToken) tokenList,arenaType(AST_Node) arena,AST_Node **start);
+bool parse(EnclosureTreeNode *node,arenaType(AST_Node) arena,AST_Node **start);
