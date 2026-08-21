@@ -10,6 +10,7 @@ Path to Success:
     - implement in `interLang.c`
 - support "if","while":
     - add branching in InterLang
+- add floating point arithmetic
 - add sections in InterLang
 - add better asm register allocation in `InterLangCompiler.py`
 - support modifier syntax
