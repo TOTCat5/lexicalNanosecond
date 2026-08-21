@@ -340,7 +340,7 @@ AST_Node *parseStatementList(parseFuncArgs)
             AST_Node *result=arenaAlloc(arena,sizeOfNode(statementListNode));\
             result->e=AST_NODE_STATEMENT_LIST;\
 \
-            result->statementListNode.node=parseStatement(tokens,nodeListLength,arena);\
+            result->statementListNode.node=parseStatement(tokens,i,arena);\
 \
             result->statementListNode.next=parseStatementList(tokens+i+1,nodeListLength-i-1,arena);\
 \
@@ -383,14 +383,14 @@ AST_Node *parseFileLine(parseFuncArgs)
         if(
             getEnclosureToken(tokens+0)->e==LEX_TOKEN_STRUCT&&
             getEnclosureToken(tokens+1)->e==LEX_TOKEN_ID&&
-            hasEnclosureOfPonc(tokens[3],'{')
+            hasEnclosureOfPonc(tokens[2],'{')
         )
         {
             AST_Node *result=arenaAlloc(arena,sizeOfNode(structNode));
             result->e=AST_NODE_STRUCT;
 
             result->structNode.nameToken=getEnclosureToken(tokens+1);
-            result->structNode.fieldList=parseStatementList(tokens+3,nodeListLength-4,arena);
+            result->structNode.fieldList=parseStatementList(tokens[2].node.list,0,arena);
 
             return result;
         }

@@ -35,6 +35,8 @@ static const LexToken *getEnclosureTokenFunc(EnclosureTreeToken *token,size_t li
     {
         // do big error bad boo ah bleurgh
 
+        fprintf(stderr,"getEnclosureTokenFunc error file:%s line:%zu content:%s\n",fileName,line,content);
+
         return NULL;
     }
 
