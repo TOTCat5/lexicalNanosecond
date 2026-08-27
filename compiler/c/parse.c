@@ -133,18 +133,21 @@ AST_Node *parseExpr(parseFuncArgs)
     {
         for(size_t i=nodeListLength;i!=0;--i)
         {
-            if(getEnclosureToken(tokens+i-1)->e==LEX_TOKEN_PONCTUATION)
+            if(!tokens[i-1].isNewEnclosure)
             {
-                const char ponc=getEnclosureToken(tokens+i-1)->ponctuation;
-                if(ponc=='=')
+                if(tokens[i-1].token->e==LEX_TOKEN_PONCTUATION)
                 {
-                    AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
-                    result->e=AST_NODE_ASSIGNEMENT;
+                    const char ponc=getEnclosureToken(tokens+i-1)->ponctuation;
+                    if(ponc=='=')
+                    {
+                        AST_Node *result=arenaAlloc(arena,sizeOfNode(assignementNode));
+                        result->e=AST_NODE_ASSIGNEMENT;
 
-                    result->assignementNode.leftExpr=parseExpr(tokens,i-1,arena);
-                    result->assignementNode.rightExpr=parseExprWithPotentialEnclosure(tokens+nodeListLength-i,i,arena);
-                    return result;
-        
+                        result->assignementNode.leftExpr=parseExpr(tokens,i-1,arena);
+                        result->assignementNode.rightExpr=parseExprWithPotentialEnclosure(tokens+nodeListLength-i,i,arena);
+                        return result;
+            
+                    }
                 }
             }
         }
@@ -171,35 +174,42 @@ AST_Node *parseExpr(parseFuncArgs)
 
     if(
         getEnclosureToken(tokens)->e==LEX_TOKEN_ID&&
-        isTokenPonc(*getEnclosureToken(tokens+1),':')
+        !tokens[1].isNewEnclosure
     )
     {
-        AST_Node *result=arenaAlloc(arena,sizeOfNode(decVarNode));
-        result->e=AST_NODE_DEC_VAR;
+        if(isTokenPonc(*tokens[1].token,':'))
+        {
+            AST_Node *result=arenaAlloc(arena,sizeOfNode(decVarNode));
+            result->e=AST_NODE_DEC_VAR;
 
-        result->decVarNode.nameToken=getEnclosureToken(tokens);
-        result->decVarNode.typeNode=parseType(tokens+2,nodeListLength-2,arena);
+            result->decVarNode.nameToken=getEnclosureToken(tokens);
+            result->decVarNode.typeNode=parseType(tokens+2,nodeListLength-2,arena);
 
-        return result;
+            return result;
+        }
+        
     }
 
     #define checkOperation(ponctu,oper)\
     {\
         for(size_t i=nodeListLength;i!=0;--i)\
         {\
-            if(getEnclosureToken(tokens+i-1)->e==LEX_TOKEN_PONCTUATION)\
+            if(!tokens[i-1].isNewEnclosure)\
             {\
-                const char ponc=tokens[i-1].token->ponctuation;\
-                if(ponc==ponctu)\
+                if(tokens[i-1].token->e==LEX_TOKEN_PONCTUATION)\
                 {\
-                    AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));\
-                    result->e=AST_NODE_EXPRESSION;\
-\
-                    result->expressionNode.op=AST_NODE_OPERATION_##oper;\
-                    result->expressionNode.left=parseExprWithPotentialEnclosure(tokens,i-1,arena);\
-                    result->expressionNode.right=parseExprWithPotentialEnclosure(tokens+i,nodeListLength-i,arena);\
-\
-                    return result;\
+                    const char ponc=tokens[i-1].token->ponctuation;\
+                    if(ponc==ponctu)\
+                    {\
+                        AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));\
+                        result->e=AST_NODE_EXPRESSION;\
+    \
+                        result->expressionNode.op=AST_NODE_OPERATION_##oper;\
+                        result->expressionNode.left=parseExprWithPotentialEnclosure(tokens,i-1,arena);\
+                        result->expressionNode.right=parseExprWithPotentialEnclosure(tokens+i,nodeListLength-i,arena);\
+    \
+                        return result;\
+                    }\
                 }\
             }\
         }\
@@ -209,38 +219,41 @@ AST_Node *parseExpr(parseFuncArgs)
     // have to.to handle neg
     for(size_t i=nodeListLength;i!=0;--i)\
     {
-        if(getEnclosureToken(tokens+i-1)->e==LEX_TOKEN_PONCTUATION)
+        if(!tokens[i-1].isNewEnclosure)
         {
-            const char ponc=tokens[i-1].token->ponctuation;
-            if(ponc=='-')
+            if(tokens[i-1].token->e==LEX_TOKEN_PONCTUATION)
             {
-                AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));
-                result->e=AST_NODE_EXPRESSION;
-                if(i==1)
+                const char ponc=tokens[i-1].token->ponctuation;
+                if(ponc=='-')
                 {
-                    result->expressionNode.op=AST_NODE_OPERATION_NEG;
-                    result->expressionNode.left=NULL;
+                    AST_Node *result=arenaAlloc(arena,sizeOfNode(expressionNode));
+                    result->e=AST_NODE_EXPRESSION;
+                    if(i==1)
+                    {
+                        result->expressionNode.op=AST_NODE_OPERATION_NEG;
+                        result->expressionNode.left=NULL;
 
-                    result->expressionNode.right=parseExprWithPotentialEnclosure(tokens+1,nodeListLength-1,arena);
+                        result->expressionNode.right=parseExprWithPotentialEnclosure(tokens+1,nodeListLength-1,arena);
+                        
+
+                        return result;
+                    }
+                    result->expressionNode.op=AST_NODE_OPERATION_SUB;
+
+                    result->expressionNode.left=parseExprWithPotentialEnclosure(tokens,i-1,arena);
                     
-
+                    
+                    if(i==2&&hasEnclosureOfPonc(tokens[i],'('))
+                    {
+                        result->expressionNode.right=parseExpr(tokens[i].node.list,0,arena);
+                    }
+                    else
+                    {
+                        result->expressionNode.right=parseExpr(tokens+i,nodeListLength-i,arena);
+                    }
+                
                     return result;
                 }
-                result->expressionNode.op=AST_NODE_OPERATION_SUB;
-
-                result->expressionNode.left=parseExprWithPotentialEnclosure(tokens,i-1,arena);
-                
-                
-                if(i==2&&hasEnclosureOfPonc(tokens[i],'('))
-                {
-                    result->expressionNode.right=parseExpr(tokens[i].node.list,0,arena);
-                }
-                else
-                {
-                    result->expressionNode.right=parseExpr(tokens,nodeListLength-1,arena);
-                }
-            
-                return result;
             }
         }
     }

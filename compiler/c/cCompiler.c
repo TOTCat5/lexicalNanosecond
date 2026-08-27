@@ -437,7 +437,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
-    // generateInterLangCode(treeRoot,outFile);
+    generateInterLangCode(treeRoot,outFile);
 
     // generateAssembly(outFile,treeRoot);
 
@@ -454,7 +454,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.intLang","wb");
 
 
-    FILE *inFile=fopen("tests/structCreationTest.ln","rb");
+    FILE *inFile=fopen("tests/argumentToInterLang.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);

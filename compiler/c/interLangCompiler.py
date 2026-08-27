@@ -73,6 +73,7 @@ funcContext:list[str]=[]
 #           argList
 
 
+
 with open("compiler/out/cCompiler.asm","w") as outFile:
     with open("compiler/out/cCompiler.intLang","r") as inFile:
 
@@ -87,12 +88,16 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
         def assignCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==2)
             outFile.write("mov ")
+
             if commandArgs[0]=="returnValue":
                 outFile.write(registers["eax"][typeName]+", "+getVarSubStr(commandArgs[1]))
             else:
-                tempReg=registers["ebx"][typeName]
-                outFile.write(tempReg+", "+getVarSubStr(commandArgs[1])+"\n")
-                outFile.write(      "mov "+getVarSubStr(commandArgs[0])+", "+tempReg)
+                if commandArgs[1]=="returnValue":
+                                    outFile.write(getVarSubStr(commandArgs[0])+",eax")
+                else:
+                    tempReg=registers["ebx"][typeName]
+                    outFile.write(tempReg+", "+getVarSubStr(commandArgs[1])+"\n")
+                    outFile.write("mov "+getVarSubStr(commandArgs[0])+","+tempReg)
 
 
             outFile.write("\n")
@@ -165,7 +170,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             assert(pushList[-1][0]==commandArgs[0])
 
             # outFile.write("add esp,"+str(pushList[-1][PUSH_LIST_SIZE])+"\n")
-            pushList.pop()
+            # pushList.pop()
             # possibly removeable since "mov esp, ebp" should be resetting anything esp left
 
 
@@ -217,6 +222,36 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
                 continue
 
+            if test[0]=="CALLFUNC":
+
+                funcArgs:list[str]=test[2:]
+                funcName:str=test[1]
+
+
+                print(funcArgs)
+
+                argStackSize:int=0
+
+                i:int=0
+                while i<len(funcArgs)/2:
+
+                    argName:str=funcArgs[i*2+1]
+                    argTypeName:str=funcArgs[i*2]
+
+                    outFile.write("sub esp,"+str(typeToSize[argTypeName])+"\n")
+                    outFile.write("mov "+registers["ebx"][argTypeName]+","+getVarSubStr(argName)+"\n")
+                    outFile.write("mov [esp+"+str(typeToSize[argTypeName])+"],"+registers["ebx"][argTypeName]+"\n")
+
+                    argStackSize+=typeToSize[argTypeName]
+
+                    i+=1
+
+                outFile.write("call "+funcName+"\n")
+
+                outFile.write("add esp,"+str(argStackSize)+"\n")
+                
+                continue
+
 
             found:bool=False
             for x in commands:
@@ -239,6 +274,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
             if found:
                 continue
+
             
 
 

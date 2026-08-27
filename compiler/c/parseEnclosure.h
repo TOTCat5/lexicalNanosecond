@@ -29,6 +29,7 @@ struct EnclosureTreeToken
 
 #define hasEnclosureOfPonc(token,ponc) (token.isNewEnclosure&&ponc==token.node.enclosurePonc)
 
+
 static const LexToken *getEnclosureTokenFunc(EnclosureTreeToken *token,size_t line,const char *fileName,const char *content)
 {
     if(token->isNewEnclosure)

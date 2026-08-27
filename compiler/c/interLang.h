@@ -48,5 +48,6 @@ typedef enum InterLangTypeEnum
 } InterLangTypeEnum;
 
 
+
 void generateInterLangCode(AST_Node *tree,FILE *outputFile);
 
