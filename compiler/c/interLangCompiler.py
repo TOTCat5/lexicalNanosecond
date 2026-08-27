@@ -62,7 +62,8 @@ def getVarSubStr(varName:str)->str:
     for i in reversed(pushList):
         if varName==i[PUSH_LIST_VAR_NAME]:
             if i[PUSH_LIST_FUNC_ARG]:
-                return "[ebp+"+str(4+i[PUSH_LIST_STACK_PTR]-pushList[endFuncArgIdx][PUSH_LIST_STACK_PTR]+i[PUSH_LIST_SIZE])+"]"
+                #                  8 for return pointer and the stack frame
+                return "[ebp+"+str(8+i[PUSH_LIST_STACK_PTR]-pushList[endFuncArgIdx][PUSH_LIST_STACK_PTR]+i[PUSH_LIST_SIZE])+"]"
             else:
                 return "[ebp-"+str(i[PUSH_LIST_STACK_PTR]-pushList[endFuncArgIdx][PUSH_LIST_STACK_PTR])+"]"
 
