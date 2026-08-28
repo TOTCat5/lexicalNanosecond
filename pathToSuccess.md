@@ -9,6 +9,7 @@ Path to Success:
     - add ways to interact with those structures
     - implement in `interLang.c`
 - support "if","while":
+    - support double character ponctuations(e.g."`==`")
     - add branching in InterLang
 - add floating point arithmetic
 - add sections in InterLang

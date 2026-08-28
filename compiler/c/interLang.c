@@ -226,7 +226,7 @@ InterLangFunctionDeclaration *getFunctionDeclarationFromLexToken(const LexToken 
 InterLangVar returnValueVar={
     .e=InterLangTypeNotAType,
     .included=true,
-    .nameStr="resultValue",
+    .nameStr="returnValue",
     .pointToStr=true
 };
 
@@ -399,7 +399,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
             vars[1]=generateInterLangCodeInExpr(tree->expressionNode.right,scope,outputFile);\
         }\
         \
-        if(vars[0]!=NULL)\
+        if(vars[0]==NULL)\
         {\
             if(tree->expressionNode.left->e==AST_NODE_VAR)\
             {\
@@ -407,7 +407,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
             }\
         }\
         \
-        if(vars[1]!=NULL)\
+        if(vars[1]==NULL)\
         {\
             if(tree->expressionNode.right->e==AST_NODE_VAR)\
             {\
@@ -431,7 +431,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
             tempIdx>>=4;\
         }\
         InterLangVar tempForConstantVar[2]={0};\
-        if(!vars[0])\
+        if(vars[0]==NULL)\
         {\
             if(tree->expressionNode.left->e!=AST_NODE_CONSTANT)\
             {\
@@ -441,7 +441,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
             tempForConstantVar[0].nameToken=tree->expressionNode.left->constantNode.token;\
             vars[0]=tempForConstantVar+0;\
         }\
-        if(!vars[1])\
+        if(vars[1]==NULL)\
         {\
             if(tree->expressionNode.right->e!=AST_NODE_CONSTANT)\
             {\

@@ -8,7 +8,7 @@ END_FUNC
 DEF UINT32 substaction UINT32 a UINT32 b
 CALLFUNC addition UINT32 a UINT32 b
 PUSH_UINT32(t2)
-SUB_UINT32(t2,resultValue,b)
+SUB_UINT32(t2,returnValue,b)
 ASSIGN_UINT32(returnValue,t2)
 POP_UINT32(t2)
 RETURN_FUNC

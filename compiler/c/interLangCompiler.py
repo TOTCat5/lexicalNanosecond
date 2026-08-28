@@ -58,7 +58,9 @@ def pushFuncArg(argName:str,typeName:str):
     endFuncArgIdx=len(pushList)
     
 
-def getVarSubStr(varName:str)->str:
+def getVarSubStr(varName:str,typeName:str)->str:
+    if varName=="returnValue":
+        return registers["eax"][typeName]
     for i in reversed(pushList):
         if varName==i[PUSH_LIST_VAR_NAME]:
             if i[PUSH_LIST_FUNC_ARG]:
@@ -91,14 +93,14 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             outFile.write("mov ")
 
             if commandArgs[0]=="returnValue":
-                outFile.write(registers["eax"][typeName]+", "+getVarSubStr(commandArgs[1]))
+                outFile.write(registers["eax"][typeName]+", "+getVarSubStr(commandArgs[1],typeName))
             else:
                 if commandArgs[1]=="returnValue":
-                                    outFile.write(getVarSubStr(commandArgs[0])+",eax")
+                                    outFile.write(getVarSubStr(commandArgs[0],typeName)+",eax")
                 else:
                     tempReg=registers["ebx"][typeName]
-                    outFile.write(tempReg+", "+getVarSubStr(commandArgs[1])+"\n")
-                    outFile.write("mov "+getVarSubStr(commandArgs[0])+","+tempReg)
+                    outFile.write(tempReg+", "+getVarSubStr(commandArgs[1],typeName)+"\n")
+                    outFile.write("mov "+getVarSubStr(commandArgs[0],typeName)+","+tempReg)
 
 
             outFile.write("\n")
@@ -111,8 +113,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             if commandArgs[0]==commandArgs[1]:
                 tempReg=registers["ebx"][typeName]
                 result:str=(
-                    "mov "+tempReg+","+getVarSubStr(commandArgs[0])+"\n"+
-                    "add"+tempReg+ ","+getVarSubStr(commandArgs[2])+"\n"
+                    "mov "+tempReg+","+getVarSubStr(commandArgs[0],typeName)+"\n"+
+                    "add"+tempReg+ ","+getVarSubStr(commandArgs[2],typeName)+"\n"
                 )
 
                 print(result)
@@ -125,10 +127,10 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             tempReg1=registers["ecx"][typeName]
 
             result:str=(
-                "mov "+tempReg0+", "+getVarSubStr(commandArgs[1])+"\n"
-                "mov "+tempReg1+", "+getVarSubStr(commandArgs[2])+"\n"
+                "mov "+tempReg0+", "+getVarSubStr(commandArgs[1],typeName)+"\n"
+                "mov "+tempReg1+", "+getVarSubStr(commandArgs[2],typeName)+"\n"
                 "add "+tempReg0+", "+tempReg1+"\n"
-                "mov "+getVarSubStr(commandArgs[0])+", "+tempReg0+"\n"
+                "mov "+getVarSubStr(commandArgs[0],typeName)+", "+tempReg0+"\n"
             )
 
             print(result)
@@ -140,8 +142,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             if commandArgs[0]==commandArgs[1]:
                 tempReg=registers["ebx"][typeName]
                 result:str=(
-                    "mov "+tempReg+","+getVarSubStr(commandArgs[0])+"\n"+
-                    "sub"+tempReg+ ","+getVarSubStr(commandArgs[2])+"\n"
+                    "mov "+tempReg+","+getVarSubStr(commandArgs[0],typeName)+"\n"+
+                    "sub"+tempReg+ ","+getVarSubStr(commandArgs[2],typeName)+"\n"
                 )
 
                 print(result)
@@ -154,10 +156,10 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             tempReg1=registers["ecx"][typeName]
 
             result:str=(
-                "mov "+tempReg0+","+getVarSubStr(commandArgs[1])+"\n"
-                "mov "+tempReg1+","+getVarSubStr(commandArgs[2])+"\n"
+                "mov "+tempReg0+","+getVarSubStr(commandArgs[1],typeName)+"\n"
+                "mov "+tempReg1+","+getVarSubStr(commandArgs[2],typeName)+"\n"
                 "sub "+tempReg0+","+tempReg1+"\n"
-                "mov "+getVarSubStr(commandArgs[0])+","+tempReg0+"\n"
+                "mov "+getVarSubStr(commandArgs[0],typeName)+","+tempReg0+"\n"
             )
 
             print(result)
@@ -240,7 +242,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
                     argTypeName:str=funcArgs[i*2]
 
                     outFile.write("sub esp,"+str(typeToSize[argTypeName])+"\n")
-                    outFile.write("mov "+registers["ebx"][argTypeName]+","+getVarSubStr(argName)+"\n")
+                    outFile.write("mov "+registers["ebx"][argTypeName]+","+getVarSubStr(argName,argTypeName)+"\n")
                     outFile.write("mov [esp+"+str(typeToSize[argTypeName])+"],"+registers["ebx"][argTypeName]+"\n")
 
                     argStackSize+=typeToSize[argTypeName]
