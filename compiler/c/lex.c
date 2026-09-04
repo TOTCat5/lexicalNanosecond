@@ -84,7 +84,7 @@ size_t preprocess(char *str,size_t strSize)
         }
 
         bool found=false;
-        for(size_t j=0;j<sizeof(stuffToRemove)/sizeof(stuffToRemove[0]);++j)
+        for(size_t j=0;j<_countof(stuffToRemove);++j)
         {
             if(str[i]==stuffToRemove[j])
             {
@@ -148,25 +148,9 @@ const char *string_LexTokenEnum(LexTokenEnum e)
     return __func__;
 }
 
-typedef struct LexToken
-{
-    LexTokenEnum e;
-
-    union
-    {
-        char ponctuation; 
-
-        struct
-        {
-            char *str;
-            size_t strLen;
-        };
-    };
-} LexToken;
 
 
-
-uint16_t ponctuationTokens[]={
+PonctuationType ponctuationTokens[]={
     ' ',
     ',',
     '.',
@@ -178,6 +162,8 @@ uint16_t ponctuationTokens[]={
     '}',
     '[',
     ']',
+    '<',
+    '>',
     '=',
     '+',
     '-',
@@ -195,7 +181,7 @@ uint16_t ponctuationTokens[]={
 size_t checkForPonctuationToken(char token)
 {
     size_t foundIdx=SIZE_MAX;
-    for(size_t j=0;j<sizeof(ponctuationTokens)/sizeof(ponctuationTokens[0]);++j)
+    for(size_t j=0;j<_countof(ponctuationTokens);++j)
     {
         if(token==ponctuationTokens[j])
         {
@@ -314,7 +300,7 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
         if(tokenList[i].e==LEX_TOKEN_UNDEFINED)
         {
             size_t keywordIdx=SIZE_MAX;
-            for(size_t j=0;j<sizeof(keywords)/sizeof(*keywords);++j)
+            for(size_t j=0;j<_countof(keywords);++j)
             {
                 if(lengths[j]==tokenList[i].strLen)
                 {
@@ -367,6 +353,20 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
         {
             listRemoveAtIndex(tokenList,i);
             i-=1;
+        }
+    }
+
+    for(size_t i=listLength(tokenList)-1;i!=0;--i)
+    {
+        if(
+            isTokenPonc(tokenList[i],'=')&&
+            tokenList[i-1].e==LEX_TOKEN_PONCTUATION
+        )
+        {
+            tokenList[i-1].ponctuation=(tokenList[i-1].ponctuation<<8)|tokenList[i].ponctuation;
+            listRemoveAtIndex(tokenList,i);
+
+            i+=1;
         }
     }
 

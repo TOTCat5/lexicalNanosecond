@@ -1,0 +1,5 @@
+
+main():int32
+{
+    test:bool=1>2;
+}

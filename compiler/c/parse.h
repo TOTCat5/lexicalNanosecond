@@ -19,6 +19,7 @@
     X(AST_NODE_PRECISION)\
     X(AST_NODE_STRUCT)\
     X(AST_NODE_MODIFIER)\
+    X(AST_NODE_IF_ELSE)\
     
 
 
@@ -179,6 +180,13 @@ struct AST_Node
             const LexToken *typeWritten;
             AST_Node *code;
         } modifierNode;
+
+        struct
+        {
+            AST_Node *conditionExpr;
+            AST_Node *ifCode;
+            AST_Node *elseCode;
+        } ifElseNode;
     };
 };
 

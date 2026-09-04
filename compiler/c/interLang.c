@@ -153,7 +153,7 @@ void pushToScope(InterLangVarScope *scope,InterLangVar *var,FILE *file)
 
 InterLangTypeEnum lnTypeNameToInterLangTypeEnum(const LexToken *lnName)
 {
-    for(size_t i=0;i<sizeof(lnTypeNames)/sizeof(lnTypeNames[0]);++i)
+    for(size_t i=0;i<_countof(lnTypeNames);++i)
     {
         if(isLexTokenEqualToStr(lnName,lnTypeNames[i]))
             return i;

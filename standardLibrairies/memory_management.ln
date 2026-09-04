@@ -8,7 +8,7 @@ modifier(type) getAddr(object:type):ptr(type);
 
 modifier(type) deReference(p:ptr(type)):type;
 
-\\ modifier(type) overload[Operator](p:ptr(type))=deReference(p);
+\\ modifier(type) overload[Operator](p:ptr(type)):type=deReference(p);
 
 modifier(type) alloc(size:int):ptr(type);
 

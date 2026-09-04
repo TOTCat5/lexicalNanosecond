@@ -3,14 +3,14 @@ created after commit 25a0d1d
 Path to Success:
 - ~~refactor the parsing to first make a tree of all the enclosures then the AST~~
 - ~~support function calling~~
-- implement structures in InterLang:
+- support "if","while":
+    - ~~support double character ponctuations(e.g."`==`")~~
     - add better support to non linear asm generation in `InterLangCompiler.py`
+    - add branching in InterLang
+- implement structures in InterLang:
     - add way to create structures in InterLang (may need to rename `DEF` to `DEFFUNC`)
     - add ways to interact with those structures
     - implement in `interLang.c`
-- support "if","while":
-    - support double character ponctuations(e.g."`==`")
-    - add branching in InterLang
 - add floating point arithmetic
 - add sections in InterLang
 - add better asm register allocation in `InterLangCompiler.py`

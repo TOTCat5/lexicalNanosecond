@@ -43,13 +43,16 @@ typedef enum LexTokenEnum
 
 const char *string_LexTokenEnum(LexTokenEnum e);
 
+
+typedef uint16_t PonctuationType;
+
 typedef struct LexToken
 {
     LexTokenEnum e;
 
     union
     {
-        char ponctuation; 
+        PonctuationType ponctuation;
 
         struct
         {
@@ -123,7 +126,7 @@ static void printLexToken(FILE *file,const LexToken *token)
     switch(token->e)
     {
         case LEX_TOKEN_PONCTUATION:
-            fprintf(file,"%c",token->ponctuation);
+            fprintf(file,"%c%c",token->ponctuation&0xff,token->ponctuation>>8);
         break;
 
         default:

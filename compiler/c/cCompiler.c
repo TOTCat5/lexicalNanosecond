@@ -318,7 +318,7 @@ void printTree(AST_Node *node)
             depth++;
 
             printTreeExpr
-            printf("typeNode\n");
+            printf("typeNode:\n");
             depth++;
             printTree(node->precisionNode.typeNode);
             depth--;
@@ -334,7 +334,7 @@ void printTree(AST_Node *node)
 
         case AST_NODE_STRUCT:
             printTreeExpr
-            printf("struct\n");
+            printf("struct:\n");
 
             depth++;
             
@@ -343,6 +343,36 @@ void printTree(AST_Node *node)
             
             depth++;
             printTree(node->structNode.fieldList);
+            depth--;
+
+            depth--;
+        break;
+
+        case AST_NODE_IF_ELSE:
+            printTreeExpr
+            printf("ifElse:\n");
+
+            depth++;
+
+            printTreeExpr
+            printf("conditionExpr:\n");
+
+            depth++;
+            printTree(node->ifElseNode.conditionExpr);
+            depth--;
+
+            printTreeExpr
+            printf("ifCode:\n");
+
+            depth++;
+            printTree(node->ifElseNode.ifCode);
+            depth--;
+
+            printTreeExpr
+            printf("elseCode:\n");
+
+            depth++;
+            printTree(node->ifElseNode.elseCode);
             depth--;
 
             depth--;
@@ -396,7 +426,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
         switch(tokens[i].e)
         {
             case LEX_TOKEN_PONCTUATION:
-                printf(",\n\t\tchar=\'%c\'",tokens[i].ponctuation);
+                printf(",\n\t\tchar=\'%c%c\'",tokens[i].ponctuation>>8,tokens[i].ponctuation&0xff);
             break;
 
             case LEX_TOKEN_UNDEFINED:
@@ -437,7 +467,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
-    generateInterLangCode(treeRoot,outFile);
+    // generateInterLangCode(treeRoot,outFile);
 
     // generateAssembly(outFile,treeRoot);
 
@@ -454,7 +484,7 @@ int main(int argc,char *argv[])
     FILE *outFile=fopen("compiler/out/cCompiler.intLang","wb");
 
 
-    FILE *inFile=fopen("tests/argumentToInterLang.ln","rb");
+    FILE *inFile=fopen("tests/ifParsingTest.ln","rb");
 
     fseek(inFile,0,SEEK_END);
     size_t fileSize=_ftelli64(inFile);
