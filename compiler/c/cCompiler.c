@@ -5,7 +5,7 @@
 
 
 
-#define printTreeExpr for(int depthIdx=0;depthIdx<depth;++depthIdx){printf("     ");}
+#define printTreeExpr for(int depthIdx=0;depthIdx<depth;++depthIdx){printf("|   ");}
 
 
 void printEnclosureTree(EnclosureTreeNode *node)
@@ -467,7 +467,7 @@ void compile(char *str,size_t strSize,FILE *outFile)
 
     // fputs("section .text\nglobal WinMain\nWinMain:\ncall main\nret\n",outFile);
 
-    // generateInterLangCode(treeRoot,outFile);
+    generateInterLangCode(treeRoot,outFile);
 
     // generateAssembly(outFile,treeRoot);
 

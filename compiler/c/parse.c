@@ -349,7 +349,6 @@ AST_Node *parseStatementList(parseFuncArgs)
         nodeListLength=listLength(tokens);
     }
 
-    size_t enclosureCount=0;
     for(size_t i=0;i<nodeListLength;++i)
     {
         #define thing\
@@ -370,7 +369,7 @@ AST_Node *parseStatementList(parseFuncArgs)
 
         if(tokens[i].isNewEnclosure)
         {
-            if(tokens->node.enclosurePonc!='{')
+            if(tokens[i].node.enclosurePonc!='{')
             {
                 continue;
             }

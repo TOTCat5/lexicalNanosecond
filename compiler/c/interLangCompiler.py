@@ -186,7 +186,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             (assignCommand, "ASSIGN"),
             (addCommand,    "ADD"),
             (subCommand,    "SUB"),
-            (popCommand,    "POP")
+            (popCommand,    "POP"),
+            ()
         ]
 
         lines=inFile.readlines()

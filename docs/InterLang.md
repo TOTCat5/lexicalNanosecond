@@ -1,4 +1,6 @@
 InterLang is the **Inter**mediate **Lang**uage for lexicalNanosecond.
 It is a language close to assembly. It is formed its instructions as `OP_TYPE(arg0,arg1...)`.
 Functions are defined as `DEF funcName TYPE arg0 TYPE arg1...:`. And called as `CALLFUNC funcName TYPE arg0 TYPE arg1...`
-It has a stack and you can basically put anything on it and "RETURN_FUNC" will basically remove it all
+It has a stack and you can basically put anything on it and "RETURN_FUNC" will basically remove it all.
+Branching is made through the new label `BRANCH branchName` as you can just `GOTO(branchName)` and `GOTOIFCOND(branchName,condition)`.
+Branch names are global to make the compiler easier on me.
