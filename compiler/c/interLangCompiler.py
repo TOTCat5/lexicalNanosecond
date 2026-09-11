@@ -4,25 +4,38 @@ registers={
         "INT32":  "eax",
         "UINT32": "eax",
         "INT16":   "ax",
-        "UINT16":  "ax"
+        "UINT16":  "ax",
+        "INT8":    "al",
+        "UINT8":   "al",
+        "BOOL":    "al",
     },
     "ebx":{
         "INT32":  "ebx",
         "UINT32": "ebx",
         "INT16":   "bx",
-        "UINT16":  "bx"
+        "UINT16":  "bx",
+        "INT8":    "bl",
+        "UINT8":   "bl",
+        "BOOL":    "bl",
     },
     "ecx":{
         "INT32":  "ecx",
         "UINT32": "ecx",
         "INT16":   "cx",
-        "UINT16":  "cx"
+        "UINT16":  "cx",
+        "INT8":    "cl",
+        "UINT8":   "cl",
+        "BOOL":    "cl",
+
     },
     "edx":{
         "INT32":  "edx",
         "UINT32": "edx",
         "INT16":   "dx",
-        "UINT16":  "dx"
+        "UINT16":  "dx",
+        "INT8":    "dl",
+        "UINT8":   "dl",
+        "BOOL":    "dl",
     }
 }
 
@@ -30,7 +43,10 @@ typeToSize={
     "INT32":4,
     "UINT32":4,
     "INT16":2,
-    "UINT16":2
+    "UINT16":2,
+    "INT8":1,
+    "UINT8":1,
+    "BOOL":1
 }
 
 #              varName, stackPtr, size, funcArg
@@ -165,6 +181,21 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             print(result)
 
             outFile.write(result)
+
+        def equalCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==3)
+
+            tempReg0=registers["ebx"][typeName]
+            tempReg1=registers["ecx"]["BOOL"]
+            result:str=(
+                "mov "+tempReg0+","+getVarSubStr(commandArgs[1],typeName)+"\n"
+                "mov "+tempReg1+","+getVarSubStr(commandArgs[2],typeName)+"\n"
+                "cmp "+tempReg0+","+tempReg1+"\n"
+                "sete "+tempReg0+"\n"
+                "mov "+getVarSubStr(commandArgs[0],typeName)+","+tempReg0+"\n"
+            )
+
+            outFile.write(result)
             
         def popCommand(commandArgs:list[str],typeName:str):
             # pass
@@ -186,8 +217,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             (assignCommand, "ASSIGN"),
             (addCommand,    "ADD"),
             (subCommand,    "SUB"),
-            (popCommand,    "POP"),
-            ()
+            (equalCommand,  "EQUAL"),
+            (popCommand,    "POP")
         ]
 
         lines=inFile.readlines()

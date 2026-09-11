@@ -445,7 +445,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
         }\
         if(var==NULL)\
         {\
-            if(node==AST_NODE_VAR)\
+            if(node->e==AST_NODE_VAR)\
             {\
                 var=getInterLangVarInScopeFromAST_VarNode(node,scope);\
             }\
@@ -483,7 +483,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
             vars[1]=tempForConstantVar+1;\
         }\
         InterLangVar resultVar={\
-            .e=vars[0]->e,\
+            .e=__max(vars[0]->e,vars[1]->e),\
             .nameStr=strdup(varName),\
             .pointToStr=true\
         };\
@@ -498,6 +498,50 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
         fputInterLangVar(vars[1],outputFile);\
         fputs(")\n",outputFile);\
         return &listEnd(scope->varList);\
+
+    #define handleBinaryOp(opName)\
+        InterLangVar *vars[2]={NULL,NULL};\
+        getVarsExpr(vars)\
+        char varName[256];\
+        getUniqueName(varName);\
+        InterLangVar tempForConstantVar[2]={0};\
+        if(vars[0]==NULL)\
+        {\
+            if(tree->expressionNode.left->e!=AST_NODE_CONSTANT)\
+            {\
+                printf("tree->expressionNode.left->e!=AST_NODE_CONSTANT\n");\
+            }\
+            tempForConstantVar[0].e=getTypeOfConstantNodeLexToken(tree->expressionNode.left->constantNode.token);\
+            tempForConstantVar[0].nameToken=tree->expressionNode.left->constantNode.token;\
+            vars[0]=tempForConstantVar+0;\
+        }\
+        if(vars[1]==NULL)\
+        {\
+            if(tree->expressionNode.right->e!=AST_NODE_CONSTANT)\
+            {\
+                printf("tree->expressionNode.right->e!=AST_NODE_CONSTANT\n");\
+            }\
+            tempForConstantVar[1].e=getTypeOfConstantNodeLexToken(tree->expressionNode.right->constantNode.token);\
+            tempForConstantVar[1].nameToken=tree->expressionNode.right->constantNode.token;\
+            vars[1]=tempForConstantVar+1;\
+        }\
+        InterLangVar resultVar={\
+            .e=InterLangTypeBool,\
+            .nameStr=strdup(varName),\
+            .pointToStr=true\
+        };\
+        pushToScope(scope,&resultVar,outputFile);\
+        fputs(opName "_",outputFile);\
+        fputs(typeNames[vars[0]->e],outputFile);\
+        fputs("(",outputFile);\
+        fputs(resultVar.nameStr,outputFile);\
+        fputs(",",outputFile);\
+        fputInterLangVar(vars[0],outputFile);\
+        fputs(",",outputFile);\
+        fputInterLangVar(vars[1],outputFile);\
+        fputs(")\n",outputFile);\
+        return &listEnd(scope->varList);\
+
 
     switch(tree->expressionNode.op)
     {
@@ -561,7 +605,7 @@ InterLangVar *generateInterLangCodeForExprNode(AST_Node *tree,InterLangVarScope 
 
         case AST_NODE_OPERATION_BOOLEAN_EQUAL:
         {
-            handleArithemticOp("EQUAL")
+            handleBinaryOp("EQUAL")
         }
         break;
     }
