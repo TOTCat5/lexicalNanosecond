@@ -7,6 +7,9 @@ Path to Success:
     - ~~support double character ponctuations(e.g."`==`")~~
     - add better support to non linear asm generation in `InterLangCompiler.py`
     - add branching in InterLang
+- add builtins in InterLang (ex:getAddr)
+- support calling pointer math or bullshit of that sort
+- support multifile code
 - implement structures in InterLang:
     - add way to create structures in InterLang (may need to rename `DEF` to `DEFFUNC`)
     - add ways to interact with those structures
@@ -15,9 +18,6 @@ Path to Success:
 - add sections in InterLang
 - add better asm register allocation in `InterLangCompiler.py`
 - support modifier syntax
-- add builtins in InterLang (ex:getAddr)
-- support calling pointer math or bullshit of that sort
-- support multifile code
 - change all the `InterLangCompiler.py` infrastructure to be able to generate a object file 
 - (possibly) add operator overloading
 - change all the `cCompiler.c` infrastructure to raise errors instead of assuming perfect code

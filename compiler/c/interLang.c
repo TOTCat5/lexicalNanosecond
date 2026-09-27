@@ -343,15 +343,28 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
             AST_Node *code=tree->defFuncNode.argList;
             while(code)
             {
-                // should be AST_NODE_DEC_VAR
-                if(code->valueListNode.value->e!=AST_NODE_DEC_VAR)
+                AST_Node *pValue=NULL;
+                if(code->e!=AST_NODE_DEC_VAR&&code->e!=AST_NODE_VALUE_LIST)
                 {
                     return;
                 }
+                // should be AST_NODE_DEC_VAR
+                if(code->e==AST_NODE_VALUE_LIST)
+                {
+                    if(code->valueListNode.value->e!=AST_NODE_DEC_VAR)
+                    {
+                        return;
+                    }
+                    pValue=code->valueListNode.value;
+                }
+                else
+                {
+                    pValue=code;
+                }
                 
                 InterLangVar var={
-                    .nameToken=code->valueListNode.value->decVarNode.nameToken,
-                    .e=lnTypeNameToInterLangTypeEnum(code->valueListNode.value->decVarNode.typeNode->typeNode.token),
+                    .nameToken=pValue->decVarNode.nameToken,
+                    .e=lnTypeNameToInterLangTypeEnum(pValue->decVarNode.typeNode->typeNode.token),
                     .included=true
                 };
                 listPushBack(funcDeclaration.args,var);
@@ -366,7 +379,14 @@ void generateInterLangCodeInScope(AST_Node *tree,InterLangVarScope *scope,FILE *
 
                 fputInterLangVar(&var,outputFile);
 
-                code=code->valueListNode.next;
+                if(code->e==AST_NODE_VALUE_LIST)
+                {
+                    code=code->valueListNode.next;
+                }
+                else
+                {
+                    code=NULL;
+                }
             }
 
             listPushBack(functionDeclarations,funcDeclaration);

@@ -1,0 +1,1 @@
+lexicalNanosecond is a compiled programming language, mostly as an useless language for [SUS_OS](https://github.com/TOTCat5/SUS_OS) but still has some interesting features. One of the only rules of the compiler is "**NEVER** USE anything but os-dependent features or the standard library" or "no external library" as the goal isn't to just make a llvm wrapper.

@@ -87,6 +87,10 @@ def getVarSubStr(varName:str,typeName:str)->str:
 
     print("error unknown variable: "+varName)
 
+    # assume it's a constant (stupid and won't compile sometimes,i know)
+    return varName if varName[0].isdigit() else None
+
+
 # context to handle functions
 funcContext:list[str]=[]
 #           argList
@@ -99,6 +103,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
         
         def pushCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==1)
+            assert(typeName!="")
 
             pushVar(commandArgs[0],typeName)
 
@@ -106,6 +111,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
         def assignCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==2)
+            assert(typeName!="")
+
             outFile.write("mov ")
 
             if commandArgs[0]=="returnValue":
@@ -125,6 +132,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
         def addCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==3)
+            assert(typeName!="")
 
             if commandArgs[0]==commandArgs[1]:
                 tempReg=registers["ebx"][typeName]
@@ -155,6 +163,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
         def subCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==3)
+            assert(typeName!="")
+
             if commandArgs[0]==commandArgs[1]:
                 tempReg=registers["ebx"][typeName]
                 result:str=(
@@ -184,6 +194,7 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
         def equalCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==3)
+            assert(typeName!="")
 
             tempReg0=registers["ebx"][typeName]
             tempReg1=registers["ecx"]["BOOL"]
@@ -198,8 +209,8 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             outFile.write(result)
             
         def popCommand(commandArgs:list[str],typeName:str):
-            # pass
             assert(len(commandArgs)==1)
+            assert(typeName!="")
 
             assert(pushList[-1][0]==commandArgs[0])
 
@@ -207,18 +218,34 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             # pushList.pop()
             # possibly removeable since "mov esp, ebp" should be resetting anything esp left
 
+        def gotoifcondCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==2)
+            assert(typeName=="")
 
+            outFile.write("jmp "+commandArgs[1]+"\n")
+
+        def negCommand(commandArgs:list[str],typeName:str):
+            assert(len(commandArgs)==2)
+            assert(typeName!="")
+
+            outFile.write(
+                "mov "+registers["ebx"][typeName]+","+getVarSubStr(commandArgs[1],typeName)+"\n"+
+                "neg "+registers["ebx"][typeName]+"\n"+
+                "mov "+getVarSubStr(commandArgs[0],typeName)+registers["ebx"][typeName]+"\n"
+            )
             
             
 
 
         commands:list[(function,str)]=[
-            (pushCommand,   "PUSH"),
-            (assignCommand, "ASSIGN"),
-            (addCommand,    "ADD"),
-            (subCommand,    "SUB"),
-            (equalCommand,  "EQUAL"),
-            (popCommand,    "POP")
+            (pushCommand,       "PUSH"),
+            (assignCommand,     "ASSIGN"),
+            (addCommand,        "ADD"),
+            (subCommand,        "SUB"),
+            (equalCommand,      "EQUAL"),
+            (popCommand,        "POP"),
+            (gotoifcondCommand, "GOTOIFCOND"),
+            (negCommand,        "NEG")
         ]
 
         lines=inFile.readlines()
@@ -287,11 +314,21 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
                 
                 continue
 
+            if test[0]=="BRANCH":
+                outFile.write(test[1]+":\n")
+                continue
+
 
             found:bool=False
             for x in commands:
-                if test[0].startswith(x[1]+"_"):
-                    cmd=test[0][len(x[1]+"_"):]
+                if test[0].startswith(x[1]):
+                    if not (test[0][len(x[1])] in ['_','(']):
+                        continue
+
+                    cmd=test[0][len(x[1]):]
+
+                    if cmd[0]=='_':
+                        cmd=cmd[1:]
 
                     startArgsIdx=cmd.find("(")
                     endArgsIdx  =cmd.find(")")
@@ -317,6 +354,14 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
                 
                 outFile.write("mov esp,ebp\npop ebp\nret\n")
 
+                # remove func args in pushList
+                for i in range(len(funcContext)):
+                    pushList.pop()
+
+
+                funcContext.clear()
+                continue
+
 
                 
 
@@ -325,12 +370,12 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
 
             if test[0]=="END_FUNC":
-                # remove func args in pushList
-                for i in range(len(funcContext)):
-                    pushList.pop()
+                # # remove func args in pushList
+                # for i in range(len(funcContext)):
+                #     pushList.pop()
 
 
-                funcContext.clear()
+                # funcContext.clear()
                 continue
 
 
