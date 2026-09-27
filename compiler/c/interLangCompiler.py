@@ -354,15 +354,6 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
                 
                 outFile.write("mov esp,ebp\npop ebp\nret\n")
 
-                # remove func args in pushList
-                for i in range(len(funcContext)):
-                    pushList.pop()
-
-
-                funcContext.clear()
-                continue
-
-
                 
 
                 continue
@@ -370,12 +361,12 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
 
             if test[0]=="END_FUNC":
-                # # remove func args in pushList
-                # for i in range(len(funcContext)):
-                #     pushList.pop()
+                # remove func args in pushList
+                for i in range(len(funcContext)):
+                    pushList.pop()
 
 
-                # funcContext.clear()
+                funcContext.clear()
                 continue
 
 
