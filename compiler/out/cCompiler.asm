@@ -16,3 +16,5 @@ mov eax, [ebp-1]
 mov esp,ebp
 pop ebp
 ret
+t2:
+mov eax, 0

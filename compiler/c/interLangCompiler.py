@@ -100,15 +100,6 @@ funcContext:list[str]=[]
 with open("compiler/out/cCompiler.asm","w") as outFile:
     with open("compiler/out/cCompiler.intLang","r") as inFile:
 
-        
-        def pushCommand(commandArgs:list[str],typeName:str):
-            assert(len(commandArgs)==1)
-            assert(typeName!="")
-
-            pushVar(commandArgs[0],typeName)
-
-            outFile.write("sub esp,"+str(typeToSize[typeName])+"\n")
-
         def assignCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==2)
             assert(typeName!="")
@@ -207,16 +198,6 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
             )
 
             outFile.write(result)
-            
-        def popCommand(commandArgs:list[str],typeName:str):
-            assert(len(commandArgs)==1)
-            assert(typeName!="")
-
-            assert(pushList[-1][0]==commandArgs[0])
-
-            # outFile.write("add esp,"+str(pushList[-1][PUSH_LIST_SIZE])+"\n")
-            # pushList.pop()
-            # possibly removeable since "mov esp, ebp" should be resetting anything esp left
 
         def gotoifcondCommand(commandArgs:list[str],typeName:str):
             assert(len(commandArgs)==2)
@@ -238,12 +219,10 @@ with open("compiler/out/cCompiler.asm","w") as outFile:
 
 
         commands:list[(function,str)]=[
-            (pushCommand,       "PUSH"),
             (assignCommand,     "ASSIGN"),
             (addCommand,        "ADD"),
             (subCommand,        "SUB"),
             (equalCommand,      "EQUAL"),
-            (popCommand,        "POP"),
             (gotoifcondCommand, "GOTOIFCOND"),
             (negCommand,        "NEG")
         ]

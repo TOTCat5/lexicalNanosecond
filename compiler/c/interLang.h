@@ -23,8 +23,6 @@
 
 // order,since order matters,it's the conversion ladder e.g:bool is tinier than int16 so it's converted to the other
 // also if change the order or add something,check in interLang.c to synchronize with the others
-
-enum InterLangTypeEnum;
 typedef enum InterLangTypeEnum
 {
     InterLangTypeBool,
@@ -47,7 +45,25 @@ typedef enum InterLangTypeEnum
     InterLangTypeNotAType=0xffffffff
 } InterLangTypeEnum;
 
+#define INTERLANG_INSTRUCTION_ENUM\
+    X(InterLangInstructionNone)\
+    X(InterLangInstructionAdd)\
+    X(InterLangInstructionSub)\
+    X(InterLangInstructionMul)\
+    X(InterLangInstructionDiv)\
+    X(InterLangInstructionEqual)\
+    X(InterLangInstructionNeg)\
+    X(InterLangInstructionGotoIf)\
 
+typedef enum InterLangInstructionEnum
+{
+    #define X(x) x,
+    INTERLANG_INSTRUCTION_ENUM
+    #undef X
+} InterLangInstructionEnum;
+
+
+#define MAX_INSTRUCTION_ARGS 4
 
 void generateInterLangCode(AST_Node *tree,FILE *outputFile);
 
