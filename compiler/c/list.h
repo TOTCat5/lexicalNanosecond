@@ -4,13 +4,17 @@
 #include <malloc.h>
 #include <stdint.h>
 
-typedef struct _d_ListHeader_
+
+
+typedef struct ListHeader
 {
     size_t length;
     size_t capacity;
-} _d_ListHeader_;
+} ListHeader;
 
-#define listGetHeader(list) ((_d_ListHeader_ *)(list)-1)
+//just know,the "__qa_" and "_p_" means nothing but is to avoid collision
+
+#define listGetHeader(list) ((ListHeader *)(list)-1)
 #define listLength(list)    (listGetHeader(list)->length)
 #define listCapacity(list)  (listGetHeader(list)->capacity)
 #define listStart(list)     ((list)[0])
@@ -25,7 +29,7 @@ static inline uint64_t next_pow2(uint64_t x)
 
 #define listCreate(list,minimumCapacity) do{\
     uint64_t roundedCapacity=next_pow2(minimumCapacity);\
-    _d_ListHeader_ *__qa_header_p_=malloc(sizeof(*__qa_header_p_)+roundedCapacity*sizeof(*list));\
+    ListHeader *__qa_header_p_=malloc(sizeof(*__qa_header_p_)+roundedCapacity*sizeof(*list));\
     __qa_header_p_->length=0;\
     __qa_header_p_->capacity=roundedCapacity;\
     list=(void *)(__qa_header_p_+1);\
@@ -37,7 +41,7 @@ static inline uint64_t next_pow2(uint64_t x)
 
 
 #define listMemoryCheck(list) do{\
-    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    ListHeader *__qa_header_p_=listGetHeader(list);\
     if(__qa_header_p_->length>=__qa_header_p_->capacity)\
     {\
         __qa_header_p_->capacity*=2;\
@@ -48,13 +52,13 @@ static inline uint64_t next_pow2(uint64_t x)
 
 #define listPushBack(list,item) do{\
     listMemoryCheck(list)\
-    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    ListHeader *__qa_header_p_=listGetHeader(list);\
     (list)[__qa_header_p_->length++]=item;\
 } while(0)
 
 #define listEmplace(list,item,idx) do{\
     listMemoryCheck(list)\
-    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    ListHeader *__qa_header_p_=listGetHeader(list);\
     memmove((list)+idx+1,list+idx,(__qa_header_p_->length-idx)*sizeof(*list));\
     [idx]=item;\
     __qa_header_p_->length++;\
@@ -65,7 +69,7 @@ static inline uint64_t next_pow2(uint64_t x)
 } while(0)
 
 #define listRemoveAtIndex(list,idx) do{\
-    _d_ListHeader_ *__qa_header_p_=listGetHeader(list);\
+    ListHeader *__qa_header_p_=listGetHeader(list);\
     memmove(list+idx,list+idx+1,(__qa_header_p_->length-idx-1)*sizeof(*list));\
     __qa_header_p_->length--;\
 } while(0)

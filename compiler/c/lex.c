@@ -173,7 +173,9 @@ PonctuationType ponctuationTokens[]={
     '&',
     '^',
     '|',
-    '!'
+    '!',
+    '==',
+    '+=',
 };
 
 
@@ -356,18 +358,37 @@ void lex(listType(LexToken) *pTokens,char *str,size_t strSize)
         }
     }
 
-    for(size_t i=listLength(tokenList)-1;i!=0;--i)
+    for(size_t i=0;i<listLength(tokenList);++i)
     {
-        if(
-            isTokenPonc(tokenList[i],'=')&&
-            tokenList[i-1].e==LEX_TOKEN_PONCTUATION
-        )
+        for(size_t j=0;j<_countof(ponctuationTokens);++j)
         {
-            tokenList[i-1].ponctuation=(tokenList[i-1].ponctuation<<8)|tokenList[i].ponctuation;
-            listRemoveAtIndex(tokenList,i);
+            // two character ponctuation
+            if(ponctuationTokens[j]>=0xff)
+            {
+                uint16_t high=ponctuationTokens[j]>>8;
+                uint16_t low=ponctuationTokens[j]&0xff;
+                if(
+                    isTokenPonc(tokenList[i],high)&&
+                    isTokenPonc(tokenList[i+1],low)
+                )
+                {
+                    tokenList[i].ponctuation<<=8;
+                    tokenList[i].ponctuation|=tokenList[i+1].ponctuation;
+                    listRemoveAtIndex(tokenList,i+1);
+                }
+            }
 
-            i+=1;
         }
+        // if(
+        //     isTokenPonc(tokenList[i],'=')&&
+        //     tokenList[i-1].e==LEX_TOKEN_PONCTUATION
+        // )
+        // {
+        //     tokenList[i-1].ponctuation=(tokenList[i-1].ponctuation<<8)|tokenList[i].ponctuation;
+        //     listRemoveAtIndex(tokenList,i);
+
+        //     i+=1;
+        // }
     }
 
 
