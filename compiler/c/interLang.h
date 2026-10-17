@@ -1,48 +1,56 @@
 #include "parse.h"
 
 /*
-    interLang is formed as "op_type(result,type(args)...)"
+    InterLang is bytecode Inter(midiate) Lang(uage).
 
-    the types are basically the normal types but in uppercase
-    
-    except for arguments,you'll have to "PUSH" and "POP" the values from the stack
 
-    the ASSIGN uses the result as the destination while it's argument is the other variable
+    All InterLang variables are thought as placeholders for future real data with a unique file id and its type.
 
-    you'll still have return a value
-
-    "DEF funcName(args)" apart from rising my python senses wil define a function
-    where as "END_FUNC" will signify the start of the end of the func code and the start of the cleanup code,as "END_OF_END_FUNC" will signify its end
-
-    when calling a func,you shall use "FUNC(funcName)"
-
-    a variable that will always exist is "returnValue" 
+    a interlang file is set as such:
+    header:
+    |   magicNumber:u64("IntLang\0")
+    |   version:InterLangVersion(u64)
+    |   flags(u64):
+    |   0-1  :endianess(little if 0,big if 1)
+    |   2-63:reserved for future use
+    globals(declarations and global labels):
+    |   declaration:
+    |   |   arguments types with id
 
 */
 
 
 // order,since order matters,it's the conversion ladder e.g:bool is tinier than int16 so it's converted to the other
 // also if change the order or add something,check in interLang.c to synchronize with the others
-typedef enum InterLangTypeEnum
-{
-    InterLangTypeBool,
 
-    InterLangTypeInt8,
-    InterLangTypeUint8,
-    
-    InterLangTypeInt16,
-    InterLangTypeUint16,
-    
-    InterLangTypeInt32,
-    InterLangTypeUint32,
-    
-    InterLangTypeInt64,
-    InterLangTypeUint64,
-    
-    InterLangTypeFloat,
-    InterLangTypeDouble,
-    
-    InterLangTypeNotAType=0xffffffff
+#define INTERLANG_TYPE_ENUM\
+    X(InterLangTypeBool)\
+\
+    X(InterLangTypeInt8)\
+    X(InterLangTypeUint8)\
+\
+    X(InterLangTypeInt16)\
+    X(InterLangTypeUint16)\
+\
+    X(InterLangTypeInt32)\
+    X(InterLangTypeUint32)\
+\
+    X(InterLangTypeInt64)\
+    X(InterLangTypeUint64)\
+\
+    X(InterLangTypeFloat)\
+    X(InterLangTypeDouble)\
+\
+    X(InterLangTypeBranch)\
+
+
+typedef enum InterLangTypeEnum:uint16_t
+{
+    #define X(x) x,
+    INTERLANG_TYPE_ENUM
+    #undef X
+
+    InterLangTypeNotAType=0xffff
 } InterLangTypeEnum;
 
 #define INTERLANG_INSTRUCTION_ENUM\
@@ -51,16 +59,39 @@ typedef enum InterLangTypeEnum
     X(InterLangInstructionSub)\
     X(InterLangInstructionMul)\
     X(InterLangInstructionDiv)\
-    X(InterLangInstructionEqual)\
     X(InterLangInstructionNeg)\
+    X(InterLangInstructionSet)\
+    X(InterLangInstructionEqual)\
+    X(InterLangInstructionGreaterThan)\
+    X(InterLangInstructionLessThan)\
     X(InterLangInstructionGotoIf)\
 
-typedef enum InterLangInstructionEnum
+typedef enum InterLangInstructionEnum:uint8_t
 {
     #define X(x) x,
     INTERLANG_INSTRUCTION_ENUM
     #undef X
 } InterLangInstructionEnum;
+
+
+typedef uint64_t InterLangVersion;
+
+typedef uint64_t InterLangVarId;
+
+
+#define MAKE_INTERLANG_VERSION(version) ((InterLangVersion)(version)&0xffff)<<UINT64_C(48)
+#define MAKE_INTERLANG_MAJOR(major)     ((InterLangVersion)(major)&0xffffffff)<<UINT64_C(16)
+#define MAKE_INTERLANG_MINOR(minor)     ((InterLangVersion)(minor)&0xffff)
+
+#define GET_INTERLANG_VERSION(version)  (((x)>>48)&0xffff)
+#define GET_INTERLANG_MAJOR(version)    (((x)>>16)&0xffffffff)
+#define GET_INTERLANG_MINOR(version)    (((x)>>08)&0xffff)
+
+
+// version: 63-48 major: 47-16 minor: 15-00
+#define CURRENT_INTERLANG_VERSION ((InterLangVersion)0x000100000010000)
+
+
 
 
 #define MAX_INSTRUCTION_ARGS 4

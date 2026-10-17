@@ -1,6 +1,2 @@
 InterLang is the **Inter**mediate **Lang**uage for lexicalNanosecond.
-It is a language close to assembly. It is formed its instructions as `OP_TYPE(arg0,arg1...)`.
-Functions are defined as `DEF funcName TYPE arg0 TYPE arg1...:`. And called as `CALLFUNC funcName TYPE arg0 TYPE arg1...`
-all variables used by a function is declared after its parameters wiht "`;`" as a seperator 
-Branching is made through the new label `BRANCH branchName` as you can just `GOTO(branchName)` and `GOTOIFCOND(branchName,condition)`.
-Branch names are global to make the compiler easier on me.
+It's a bytecode with the file extension ".intLang".

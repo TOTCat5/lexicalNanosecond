@@ -133,7 +133,14 @@ static void printLexToken(FILE *file,const LexToken *token)
             fprintf(file,"%.*s",token->strLen,token->str);
         break;
     }
+    
 }
+void fputLexToken(const LexToken *token,FILE *file)
+{
+    printLexToken(file,token);
+}
+
+
 
 
 
