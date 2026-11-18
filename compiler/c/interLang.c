@@ -1,24 +1,26 @@
 #include "interLang.h"
 
 
-char *typeNames[]={
-    "BOOL",
+//  TODO: check for any usefulness or dependency to it
 
-    "INT8",
-    "UINT8"
+// char *typeNames[]={
+//     "BOOL",
+
+//     "INT8",
+//     "UINT8"
     
-    "INT16",
-    "UINT16",
+//     "INT16",
+//     "UINT16",
     
-    "INT32",
-    "UINT32",
+//     "INT32",
+//     "UINT32",
     
-    "INT64"
-    "UINT64",
+//     "INT64"
+//     "UINT64",
     
-    "FLOAT",
-    "DOUBLE"
-};
+//     "FLOAT",
+//     "DOUBLE"
+// };
 
 char *lnTypeNames[]={
     "bool",
@@ -125,7 +127,8 @@ struct InterLangFuncContext
 {
     InterLangFuncDeclaration *declaration;
 
-    listType(InterLangInstruction) instructions;
+    size_t instructionCount;
+    InterLangInstruction *instructions;
 };
 
  
@@ -163,7 +166,8 @@ typedef struct InterLangFileHeader
 } InterLangFileHeader;
 
 
-InterLangVarId idGenerator=0;
+#define INTERLANG_RETURN_VALUE 0
+InterLangVarId idGenerator=1;
 
 #define MAX_INTERLANG_VARIABLE_IN_CONTEXT (0x100)
 
@@ -175,6 +179,13 @@ size_t contextAnchors[MAX_INTERLANG_VARIABLE_IN_CONTEXT];
 size_t varsInScopeCount=0;
 
 typedef listType(InterLangInstruction) InterLangInstructionOutput;
+
+typedef struct InterLangResult
+{
+    InterLangInstructionOutput output;
+
+    listType(InterLangFuncDeclaration) declarations;
+} InterLangResult;
 
 
 InterLangConstant getConstant(LexToken *token)
@@ -222,7 +233,7 @@ InterLangConstant getConstant(LexToken *token)
 
 #define ID_NOT_FOUND UINT64_MAX
 
-InterLangVarId getNewVar()
+InterLangVarId getNewVarId()
 {
     listLength(allVars)++;
     listMemoryCheck(allVars);
@@ -250,7 +261,22 @@ InterLangVarId getVarId(LexToken *token)
     return ID_NOT_FOUND;
 }
 
-InterLangInstructionArg getValue(AST_Node *tree,InterLangInstructionOutput *outputInstructions)
+
+InterLangInstructionArg nullArg={
+    .isConstant=true,
+    .constant={
+        .type=InterLangTypeNotAType
+    }
+};
+
+InterLangInstructionArg getValue(               AST_Node *tree,InterLangResult *pResult);
+InterLangInstructionArg generateExpr(           AST_Node *tree,InterLangResult *pResult);
+InterLangInstructionArg generateFuncCall(       AST_Node *tree,InterLangResult *pResult);
+void                    generateStatementList(  AST_Node *tree,InterLangResult *pResult);
+void                    generateFunc(           AST_Node *tree,InterLangResult *pResult);
+
+
+InterLangInstructionArg getValue(AST_Node *tree,InterLangResult *pResult)
 {
     switch(tree->e)
     {
@@ -276,24 +302,19 @@ InterLangInstructionArg getValue(AST_Node *tree,InterLangInstructionOutput *outp
 
         case AST_NODE_EXPRESSION:
         {
-            InterLangInstructionArg arg=generateExpr(tree,outputInstructions);
+            InterLangInstructionArg arg=generateExpr(tree,pResult);
             return arg;
         }
     }
 
-    return (InterLangInstructionArg){
-        .isConstant=true,
-        .constant={
-            .type=InterLangTypeNotAType
-        }
-    };
+    return nullArg;
 }
 
-InterLangInstructionArg generateExpr(AST_Node *tree,InterLangInstructionOutput *outputInstructions)
+InterLangInstructionArg generateExpr(AST_Node *tree,InterLangResult *pResult)
 {
     // TODO: check for branches
 
-    InterLangVarId tempValueId=getNewVar();
+    InterLangVarId tempValueId=getNewVarId();
 
 
 
@@ -305,10 +326,10 @@ InterLangInstructionArg generateExpr(AST_Node *tree,InterLangInstructionOutput *
             InterLangInstruction instruction={
                 .instruction=InterLangInstructionNeg,
                 .args={
-                    getValue(tree->expressionNode.right,outputInstructions)
+                    getValue(tree->expressionNode.right,pResult)
                 }
             };
-            listPushBack(*outputInstructions,instruction);
+            listPushBack(pResult->output,instruction);
         }
         return;
 
@@ -318,11 +339,11 @@ InterLangInstructionArg generateExpr(AST_Node *tree,InterLangInstructionOutput *
             InterLangInstruction instruction={\
                 .instruction=intLangInstruction,\
                 .args={\
-                    getValue(tree->expressionNode.left,outputInstructions),\
-                    getValue(tree->expressionNode.right,outputInstructions)\
+                    getValue(tree->expressionNode.left, pResult),\
+                    getValue(tree->expressionNode.right,pResult)\
                 }\
             };\
-            listPushBack(*outputInstructions,instruction);\
+            listPushBack(pResult->output,instruction);\
         }
         return;
 
@@ -332,9 +353,65 @@ InterLangInstructionArg generateExpr(AST_Node *tree,InterLangInstructionOutput *
         ARITHEMTIC_CASE(AST_NODE_OPERATION_DIV,InterLangInstructionDiv)
 
     }
+}
+
+
+void generateFunc(AST_Node *tree,InterLangResult *pResult)
+{
+    if(tree->e!=AST_NODE_DEF_FUNC)
+    {
+        return nullArg;
+    }
+
+    InterLangFuncDeclaration dec={
+        .funcName=tree->defFuncNode.funcToken,
+        .type=lnTypeNameToInterLangTypeEnum(tree->defFuncNode.typeNode->typeNode.token)
+    };
+
+    listCreate(dec.args,2);
+
+    for(AST_Node *iter=tree->defFuncNode.argList;iter;iter=iter->valueListNode.next)
+    {
+        AST_Node *value=iter->valueListNode.value;
+
+        InterLangVar var={
+            .tokenId=value->decVarNode.nameToken,
+            .id=getNewVarId(),
+            .type=lnTypeNameToInterLangTypeEnum(value->decVarNode.typeNode->typeNode.token)
+        };
+
+        listPushBack(dec.args,var);
+    }
+
+    listPushBack(pResult->declarations,dec);
+
+
+    if(tree->defFuncNode.code==NULL)
+    {
+        return nullArg;
+    }
+
 
 
 }
+
+
+
+void generateStatementList(AST_Node *tree,InterLangResult *outputInstructions)
+{
+    if(tree->e!=AST_NODE_STATEMENT_LIST)
+    {
+        return;
+    }
+
+
+
+
+
+
+
+}
+
 
 
 void generateInterLangCode(AST_Node *tree,FILE *outputFile)
@@ -342,7 +419,6 @@ void generateInterLangCode(AST_Node *tree,FILE *outputFile)
     fwrite("intLang\0",8,1,outputFile);
     InterLangFileHeader fileHeader={
         .fileVersion=CURRENT_INTERLANG_VERSION,
-        .endianess=__BYTE_ORDER__==__ORDER_BIG_ENDIAN__
     };
     fwrite(&fileHeader,sizeof(fileHeader),1,outputFile);
     

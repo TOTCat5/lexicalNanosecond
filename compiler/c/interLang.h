@@ -66,7 +66,7 @@ typedef enum InterLangTypeEnum:uint16_t
     X(InterLangInstructionLessThan)\
     X(InterLangInstructionGotoIf)\
 
-typedef enum InterLangInstructionEnum:uint8_t
+typedef enum InterLangInstructionEnum:uint32_t
 {
     #define X(x) x,
     INTERLANG_INSTRUCTION_ENUM
